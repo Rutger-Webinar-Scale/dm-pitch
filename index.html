@@ -713,7 +713,10 @@ Lisa, instagram.com/lisa, booked"></textarea>
         <div class="authswitch">Nog geen account? <a onclick="authMode('signup')">Account aanmaken</a></div>
       </div>
       <div id="authSignup" style="display:none">
-        <label class="f">Naam</label><input class="f" id="auth-name" placeholder="Voornaam" autocomplete="name">
+        <div class="grid2">
+          <div><label class="f">Voornaam</label><input class="f" id="auth-name" placeholder="Voornaam" autocomplete="given-name"></div>
+          <div><label class="f">Achternaam</label><input class="f" id="auth-lastname" placeholder="Achternaam" autocomplete="family-name"></div>
+        </div>
         <label class="f">E-mail</label><input class="f" id="auth-email2" type="email" placeholder="jij@mail.com" autocomplete="username">
         <label class="f">Wachtwoord (min. 8 tekens)</label><input class="f" id="auth-pass2" type="password" placeholder="••••••••" autocomplete="new-password">
         <div class="authmsg" id="authMsg2"></div>
@@ -891,7 +894,7 @@ async function doLogin(){
 }
 async function doSignup(){
   const msg = document.getElementById('authMsg2'); msg.className='authmsg'; msg.textContent='Account aanmaken…';
-  const name = document.getElementById('auth-name').value.trim();
+  const name = (document.getElementById('auth-name').value.trim()+' '+document.getElementById('auth-lastname').value.trim()).trim();
   const {data, error} = await sb.auth.signUp({
     email: document.getElementById('auth-email2').value.trim(),
     password: document.getElementById('auth-pass2').value,
