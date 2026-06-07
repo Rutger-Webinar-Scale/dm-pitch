@@ -767,9 +767,7 @@ const KPIS = [
 ];
 
 const TOOLS = [
-  {base:'th_allround',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video — All-round',    desc:'Toestemmingsvideo, algemene versie'},
-  {base:'th_leadmagnet', stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video — Lead Magnet',  desc:'Versie voor lead-magnet leads'},
-  {base:'th_follower',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video — New Follower', desc:'Versie voor nieuwe volgers'},
+  {base:'th_allround',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video',                desc:'De toestemmingsvideo voor de eerste DM'},
   {base:'video',         stage:'vsl',     type:'media', accept:'video/*',         name:'Evergreen VSL',                 desc:'Houd \'m onder 2,5 min'},
   {base:'vn_vsl',        stage:'vsl',     type:'media', accept:'audio/*',         name:'Voice-note bij VSL',            desc:'Pro-tip: stuur als spraakmemo — converteert beter'},
   {base:'booking',       stage:'booking', type:'link',  tool:'iClosed',           name:'Calendar link',                 desc:'De agendalink voor deze taal'},
@@ -1649,9 +1647,7 @@ function assetBtnsHTML(l, step){
   const btn=(label,url)=> url ? `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">${label}</button>` : '';
   let h='';
   if(step.initial){
-    h += btn(`🎥 TH all-round ${flag}`,links['th_allround'+sfx])
-       + btn(`🎥 TH lead-magnet ${flag}`,links['th_leadmagnet'+sfx])
-       + btn(`🎥 TH new follower ${flag}`,links['th_follower'+sfx]);
+    h += btn(`🎥 Initiële video ${flag}`,links['th_allround'+sfx]);
   }
   if(step.vsl){
     h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
@@ -1963,7 +1959,7 @@ function renderPlaybook(){
   const links = state.toolLinks || {};
   let migrated=false;
   if(links.booking && !links.booking_nl){ links.booking_nl=links.booking; delete links.booking; migrated=true; }
-  ['th_allround','th_leadmagnet','th_follower','video','vn_vsl','vn_booking'].forEach(k=>{
+  ['th_allround','video','vn_vsl','vn_booking'].forEach(k=>{
     if(links[k] && !links[k+'_nl']){ links[k+'_nl']=links[k]; delete links[k]; migrated=true; }
   });
   if(migrated){ state.toolLinks=links; saveState(); }
