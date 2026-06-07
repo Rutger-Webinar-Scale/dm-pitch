@@ -343,7 +343,7 @@
       <div class="plane"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></div>
       <div>
         <h1>DM Pitch System</h1>
-        <div class="sub">Outreach Engine · Inputs → Process → Output → Feedback</div>
+        <div class="sub">Outreach-machine · Input → Proces → Output → Feedback</div>
       </div>
     </div>
     <div class="topright">
@@ -351,23 +351,24 @@
       <div class="pill" id="userPill" style="gap:6px"><b id="userName"></b> <span id="userRole" style="background:var(--signal);color:#fff;border-radius:20px;font-size:9px;padding:1px 7px"></span></div>
       <div class="pill" id="setterPill" style="display:none;padding:5px 8px 5px 13px">🧑‍💼 <select id="setterSwitch" onchange="setSetterFilter(this.value)" style="border:none;background:none;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ink);outline:none"></select></div>
       <div class="pill" style="padding:5px 8px 5px 13px">👤 <select id="acctSwitch" onchange="setActiveAccount(this.value)" style="border:none;background:none;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ink);outline:none"></select></div>
-      <div class="pill">Approached today <b id="approachedToday">0</b></div>
+      <div class="pill">Vandaag benaderd <b id="approachedToday">0</b></div>
       <span class="syncpill ok" id="syncPill">cloud ✓</span>
-      <button class="btn ghost" onclick="openImport()">⇪ Import</button>
-      <button class="btn sig" onclick="openLead()">+ New Lead</button>
+      <button class="btn ghost" onclick="openImport()">⇪ Importeer</button>
+      <button class="btn sig" onclick="openLead()">+ Nieuwe lead</button>
       <button class="btn ghost sm" onclick="doLogout()" title="Uitloggen">⏻</button>
     </div>
   </header>
 
   <nav class="tabs">
     <button class="tab active" data-view="dash">Dashboard</button>
-    <button class="tab" data-view="send">Initial Outreach <span class="count" id="cntSend">0</span></button>
-    <button class="tab" data-view="pipe">Stimuli Pipeline <span class="count" id="cntPipe">0</span></button>
-    <button class="tab" data-view="today">Follow-up Queue <span class="count" id="cntDue">0</span></button>
-    <button class="tab" data-view="all">Lead List (ALL) <span class="count" id="cntAll">0</span></button>
-    <button class="tab" data-view="scripts">Scripts &amp; Chain</button>
-    <button class="tab" data-view="ab">A/B Tests</button>
-    <button class="tab" data-view="ft">Funnel Test</button>
+    <button class="tab" data-view="send">Eerste DM <span class="count" id="cntSend">0</span></button>
+    <button class="tab" data-view="pipe">Pipelines <span class="count" id="cntPipe">0</span></button>
+    <button class="tab" data-view="today">Follow-ups <span class="count" id="cntDue">0</span></button>
+    <button class="tab" data-view="all">Alle leads <span class="count" id="cntAll">0</span></button>
+    <button class="tab" data-view="scripts">Scripts</button>
+    <button class="tab" data-view="ab">A/B-test</button>
+    <button class="tab" data-view="ft">Funnel-test</button>
+    <button class="tab" data-view="stats">Statistieken</button>
     <button class="tab" data-view="playbook">Playbook</button>
   </nav>
 
@@ -375,23 +376,40 @@
   <section class="view show" id="view-dash">
     <div class="target">
       <div>
-        <div class="tlabel">Volume is the game — daily IG outreach target</div>
+        <div class="tlabel">Volume wint — dagelijks IG outreach-doel</div>
         <div class="big"><span id="appNow">0</span> / <span id="appGoal">30</span></div>
       </div>
       <div class="bar"><i id="appBar" style="width:0%"></i></div>
-      <button class="btn ghost sm" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Set target</button>
+      <button class="btn ghost sm" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Doel aanpassen</button>
     </div>
 
+    <div class="sec-h" style="margin-top:24px">Vandaag</div>
+    <div class="sec-sub">Je dagelijkse aantallen — wat er vandaag gebeurd is.</div>
     <div class="daily" id="dailyStrip"></div>
 
+    <div class="sec-h">Actie nodig</div>
+    <div class="sec-sub">Klik door naar wat er nú moet gebeuren.</div>
+    <div class="metrics" id="actionCards" style="grid-template-columns:repeat(3,1fr)"></div>
+
+    <div id="teamStatsWrap" style="display:none">
+      <div class="sec-h">Team — per setter <span style="font-family:'Space Mono';font-size:11px;color:var(--muted);font-weight:400" id="teamRangeLbl"></span></div>
+      <div class="sec-sub">Elke setter naast elkaar. Klik op een naam om de hele app op die setter te filteren.</div>
+      <div style="overflow-x:auto" id="teamStats"></div>
+    </div>
+  </section>
+
+  <!-- ================= STATISTIEKEN ================= -->
+  <section class="view" id="view-stats">
+    <div class="sec-h">Statistieken</div>
+    <div class="sec-sub">KPI's en funnel-doorstroom binnen het gekozen tijdvenster.</div>
     <div class="rangebar">
-      <span class="range-label">Metrics window</span>
+      <span class="range-label">Tijdvenster</span>
       <div class="range-toggle" id="rangeToggle">
-        <button class="range-btn" data-range="7">7 days</button>
-        <button class="range-btn active" data-range="30">30 days</button>
-        <button class="range-btn" data-range="90">90 days</button>
-        <button class="range-btn" data-range="all">All</button>
-        <button class="range-btn" data-range="custom">Custom</button>
+        <button class="range-btn" data-range="7">7 dagen</button>
+        <button class="range-btn active" data-range="30">30 dagen</button>
+        <button class="range-btn" data-range="90">90 dagen</button>
+        <button class="range-btn" data-range="all">Alles</button>
+        <button class="range-btn" data-range="custom">Zelf kiezen</button>
       </div>
       <div class="range-custom" id="rangeCustom">
         <input type="date" class="f" id="rangeFrom"> <span>→</span> <input type="date" class="f" id="rangeTo">
@@ -401,21 +419,15 @@
     <div class="metrics" id="metricCards"></div>
     <div id="bottleneckInsight"></div>
 
-    <div class="sec-h">Funnel throughput <span style="font-family:'Space Mono';font-size:11px;color:var(--muted);font-weight:400">— within the selected window</span></div>
-    <div class="sec-sub">Output of one stage is the input of the next. Find the stage that's choking the system.</div>
+    <div class="sec-h">Funnel-doorstroom</div>
+    <div class="sec-sub">De output van elke fase is de input van de volgende. Zoek de fase die het systeem verstikt.</div>
     <div id="funnelFlow"></div>
-
-    <div id="teamStatsWrap" style="display:none">
-      <div class="sec-h">Team — per setter <span style="font-family:'Space Mono';font-size:11px;color:var(--muted);font-weight:400">— within the selected window</span></div>
-      <div class="sec-sub">Every setter's funnel side by side. Click a name to filter the whole app to that setter.</div>
-      <div style="overflow-x:auto" id="teamStats"></div>
-    </div>
   </section>
 
-  <!-- ================= INITIAL OUTREACH (to send) ================= -->
+  <!-- ================= EERSTE DM (te versturen) ================= -->
   <section class="view" id="view-send">
-    <div class="sec-h">Initial Outreach — first DM still to send</div>
-    <div class="sec-sub">Every imported lead lands here first. Nothing is counted as "approached" yet. Send the initial DM manually, then hit "Initial sent" to start the follow-up cadence.</div>
+    <div class="sec-h">Eerste DM — nog te versturen</div>
+    <div class="sec-sub">Elke geïmporteerde lead landt hier eerst. Telt nog niet als "benaderd". Stuur de eerste DM handmatig en klik "✓ Verstuurd" om de follow-up-cadans te starten.</div>
     <div id="sendList"></div>
   </section>
 
@@ -427,42 +439,41 @@
         <div class="sec-sub" style="margin:2px 0 0" id="pipeDesc">Sleep leads tussen de fases. Switch tussen de twee funnels die je test.</div>
       </div>
       <div class="range-toggle" id="funnelToggle">
-        <button class="range-btn active" data-fn="video" onclick="setFunnelView('video')">🎥 Video</button>
+        <button class="range-btn active" data-fn="video" onclick="setFunnelView('video')">🎥 VSL</button>
         <button class="range-btn" data-fn="chat" onclick="setFunnelView('chat')">💬 Chat</button>
       </div>
     </div>
     <div class="board" id="board" style="margin-top:14px"></div>
   </section>
 
-  <!-- ================= FOLLOW-UP QUEUE ================= -->
+  <!-- ================= FOLLOW-UPS ================= -->
   <section class="view" id="view-today">
-    <div class="sec-h">Follow-up Queue</div>
-    <div class="sec-sub">Who needs a touch today — grouped by overdue / today / this week. 3 follow-ups for cold, up to 8 for engaged.</div>
+    <div class="sec-h">Follow-ups</div>
+    <div class="sec-sub">Wie vandaag een bericht nodig heeft — gegroepeerd op te laat / vandaag / deze week.</div>
     <div id="dueList"></div>
   </section>
 
-  <!-- ================= LEAD LIST ALL ================= -->
+  <!-- ================= ALLE LEADS ================= -->
   <section class="view" id="view-all">
-    <div class="sec-h">Metrics Tracker — Lead List (ALL)</div>
-    <div class="sec-sub">Every IG lead in the system. Mark seen / replied / booked as you work them.</div>
+    <div class="sec-h">Alle leads</div>
+    <div class="sec-sub">Elke IG-lead in het systeem.</div>
     <div style="overflow-x:auto">
       <table id="leadTable">
         <thead><tr>
-          <th>Status</th><th>Name</th><th>Platform</th><th>Profile</th>
-          <th>Phase</th><th>Follow-ups</th><th>Next due</th><th></th>
+          <th>Status</th><th>Naam</th><th>Funnel</th><th>Profiel</th>
+          <th>Fase</th><th>Follow-ups</th><th>Volgende actie</th><th></th>
         </tr></thead>
         <tbody id="leadBody"></tbody>
       </table>
     </div>
-    <div class="seed">No leads yet? <a onclick="seedDemo()">Load a demo lead set</a> to see the system in motion.</div>
   </section>
 
   <!-- ================= SCRIPTS ================= -->
   <section class="view" id="view-scripts">
     <div class="lang-bar">
       <div>
-        <div class="sec-h" style="margin:0">Scripts &amp; Chain</div>
-        <div class="sec-sub" style="margin:2px 0 0">Instagram DM scripts. Keep a Dutch and an English version of every step.</div>
+        <div class="sec-h" style="margin:0">Scripts</div>
+        <div class="sec-sub" style="margin:2px 0 0">Instagram DM-scripts. Houd van elke stap een Nederlandse en Engelse versie bij.</div>
       </div>
       <div class="lang-toggle">
         <button class="lang-btn active" data-lang="nl" onclick="setLang('nl')">🇳🇱 NL</button>
@@ -470,34 +481,34 @@
       </div>
     </div>
 
-    <div class="sec-h" style="margin-top:22px">Initial message — the cheat code <span class="savednote" id="sv-initial">saved</span></div>
-    <div class="sec-sub">First DM. Each new lead is auto-assigned one variant below (round-robin). Compare results in the A/B Tests tab. Permission-to-pitch — say their first name, keep it vague.</div>
-    <div class="abctrl">Variants in rotation:
+    <div class="sec-h" style="margin-top:22px">Openingsbericht — de cheat code <span class="savednote" id="sv-initial">opgeslagen</span></div>
+    <div class="sec-sub">De eerste DM. Elke nieuwe lead krijgt automatisch een variant (om-en-om). Vergelijk resultaten in de A/B-test tab. Vraag toestemming om te pitchen — gebruik de voornaam, houd het vaag.</div>
+    <div class="abctrl">Varianten in rotatie:
       <div class="range-toggle" id="abVarToggle">
-        <button class="range-btn" data-abn="1">A only</button>
+        <button class="range-btn" data-abn="1">Alleen A</button>
         <button class="range-btn" data-abn="2">A / B</button>
         <button class="range-btn" data-abn="3">A / B / C</button>
       </div>
-      <span>“A only” = single message, no test.</span>
+      <span>"Alleen A" = één bericht, geen test.</span>
     </div>
     <div id="initialBlock" class="scard" style="margin-bottom:16px"></div>
 
-    <div class="sec-h">The follow-up chain</div>
-    <div class="sec-sub">Every follow-up is its own block — exactly one message each. Add an optional GIF URL per follow-up; it shows up in the queue so you can attach it.</div>
+    <div class="sec-h">De follow-up keten</div>
+    <div class="sec-sub">Elke follow-up is een eigen blok — precies één bericht per stuk. Voeg optioneel een GIF-URL toe; die verschijnt in de follow-up lijst.</div>
     <div class="chain">
       <div class="scard">
         <h4><span class="phase-dot" style="background:var(--intent)"></span> Intent · I-FUP</h4>
-        <div class="meta">No reply → 3 follow-ups max (3 is the sweet spot)</div>
+        <div class="meta">Geen reactie → max 3 follow-ups (3 is de sweet spot)</div>
         <div id="intentFups"></div>
       </div>
       <div class="scard">
-        <h4><span class="phase-dot" style="background:var(--engaged)"></span> Engaged · E-FUP</h4>
-        <div class="meta">Showed interest → up to 8 follow-ups. Most reply on #2–#5.</div>
+        <h4><span class="phase-dot" style="background:var(--engaged)"></span> Geïnteresseerd · E-FUP</h4>
+        <div class="meta">Interesse getoond → tot 8 follow-ups. De meeste reageren op #2–#5.</div>
         <div id="engagedFups"></div>
       </div>
       <div class="scard">
-        <h4><span class="phase-dot" style="background:var(--booked)"></span> Booked · B-FUP</h4>
-        <div class="meta">Booking link sent → all follow-ups redirect to the calendar.</div>
+        <h4><span class="phase-dot" style="background:var(--booked)"></span> Geboekt · B-FUP</h4>
+        <div class="meta">Bookinglink gestuurd → elke follow-up wijst naar de agenda.</div>
         <div id="bookedFups"></div>
       </div>
       <div class="scard">
@@ -508,40 +519,40 @@
     </div>
   </section>
 
-  <!-- ================= A/B TESTS ================= -->
+  <!-- ================= A/B-TEST ================= -->
   <section class="view" id="view-ab">
-    <div class="sec-h">A/B Test — initial message</div>
-    <div class="sec-sub">The first DM is the biggest lever on reply rate. Run variants head-to-head; every new lead is auto-assigned one (round-robin). Compared within the dashboard time window.</div>
+    <div class="sec-h">A/B-test — openingsbericht</div>
+    <div class="sec-sub">De eerste DM is de grootste hefboom op je reply rate. Test varianten tegen elkaar; elke nieuwe lead krijgt er automatisch één (om-en-om). Vergeleken binnen het tijdvenster van Statistieken.</div>
     <div id="abBody"></div>
   </section>
 
-  <!-- ================= FUNNEL TEST ================= -->
+  <!-- ================= FUNNEL-TEST ================= -->
   <section class="view" id="view-ft">
-    <div class="sec-h">Funnel Test — 💬 Chat vs 🎥 Video</div>
-    <div class="sec-sub">Nieuwe leads worden om-en-om verdeeld (round-robin). Vergeleken op fase-conversies binnen het dashboard-tijdvenster: reply → call/booking voorgesteld → geboekt.</div>
+    <div class="sec-h">Funnel-test — 💬 Chat vs 🎥 VSL</div>
+    <div class="sec-sub">Nieuwe leads worden om-en-om verdeeld. Vergeleken op fase-conversies binnen het tijdvenster (Statistieken): reactie → call/booking voorgesteld → geboekt.</div>
     <div id="ftBody"></div>
   </section>
 
   <!-- ================= PLAYBOOK ================= -->
   <section class="view" id="view-playbook">
-    <div class="sec-h">The 4 that matter most</div>
-    <div class="sec-sub">Get these right and you're playing outbound on easy mode.</div>
+    <div class="sec-h">De 4 die er het meest toe doen</div>
+    <div class="sec-sub">Krijg deze goed en outbound wordt easy mode.</div>
     <div class="princip">
-      <div class="pcard"><div class="pn">01</div><div class="pt">Volume</div><div class="pd">It stays a volume game. Always ask: how do I 5×–10× this? "How many did you send?"</div></div>
-      <div class="pcard"><div class="pn">02</div><div class="pt">Follow-up</div><div class="pd">3 for cold, up to 8 for engaged. Most replies land on follow-up #2–#5.</div></div>
-      <div class="pcard"><div class="pn">03</div><div class="pt">Results</div><div class="pd">Sell the vacation, not the flight. "I can get you clients." Never the details.</div></div>
-      <div class="pcard"><div class="pn">04</div><div class="pt">Offer</div><div class="pd">The biggest variable. An irresistible offer multiplies even weak copy.</div></div>
+      <div class="pcard"><div class="pn">01</div><div class="pt">Volume</div><div class="pd">Het blijft een volumespel. Vraag altijd: hoe doe ik dit 5×–10×? "Hoeveel heb je er verstuurd?"</div></div>
+      <div class="pcard"><div class="pn">02</div><div class="pt">Follow-up</div><div class="pd">3 voor koud, tot 8 bij interesse. De meeste reacties landen op follow-up #2–#5.</div></div>
+      <div class="pcard"><div class="pn">03</div><div class="pt">Resultaat</div><div class="pd">Verkoop de vakantie, niet de vlucht. "Ik kan je aan klanten helpen." Nooit de details.</div></div>
+      <div class="pcard"><div class="pn">04</div><div class="pt">Aanbod</div><div class="pd">De grootste variabele. Een onweerstaanbaar aanbod vermenigvuldigt zelfs zwakke copy.</div></div>
     </div>
 
-    <div class="sec-h" style="margin-top:34px">Outreach tools</div>
-    <div class="sec-sub">Make high volume bearable. Channel → recommended tool.</div>
+    <div class="sec-h" style="margin-top:34px">Outreach-tools</div>
+    <div class="sec-sub">Maak hoog volume draaglijk. Plak je eigen links — gedeeld met het hele team.</div>
     <div class="toolwrap" id="toolsWrap"></div>
 
-    <div class="sec-h" style="margin-top:34px">KPI reference</div>
-    <div class="sec-sub">Instagram DM targets. ABR ≥ 2% = proof of concept → scale to the moon.</div>
+    <div class="sec-h" style="margin-top:34px">KPI-referentie</div>
+    <div class="sec-sub">Instagram DM-doelen. ABR ≥ 2% = proof of concept → opschalen.</div>
     <div style="overflow-x:auto">
       <table>
-        <thead><tr><th>Stage</th><th>Media seen</th><th>Positive reply</th><th>Booking send</th><th>Appointment booked</th></tr></thead>
+        <thead><tr><th>Kanaal</th><th>Media gezien</th><th>Positieve reactie</th><th>Booking gestuurd</th><th>Call geboekt</th></tr></thead>
         <tbody>
           <tr class="row"><td><b>Instagram DM</b></td><td>MSR 60%</td><td>PRR 6%</td><td>BSR 3%</td><td>ABR 2%</td></tr>
         </tbody>
@@ -550,9 +561,10 @@
   </section>
 
   <div class="footer">
-    DM PITCH SYSTEM · built on the outbound masterclass framework · data synced via Supabase cloud<br>
-    Always be consistent. Don't change anything until you have enough data. Data don't lie.
+    DM PITCH SYSTEM · gebouwd op het outbound masterclass framework · data gesynchroniseerd via Supabase cloud<br>
+    Wees altijd consistent. Verander niks tot je genoeg data hebt. Data liegt niet.
   </div>
+
 </div>
 
 <!-- ================= LEAD MODAL ================= -->
@@ -564,7 +576,7 @@
     </div>
     <div class="modal-b">
       <div class="grid2">
-        <div><label class="f">Name</label><input class="f" id="f-name" placeholder="First name"></div>
+        <div><label class="f">Naam</label><input class="f" id="f-name" placeholder="Voornaam"></div>
         <div><label class="f">Platform</label>
           <select class="f" id="f-plat">
             <option>Instagram</option>
@@ -572,15 +584,15 @@
         </div>
       </div>
       <div class="grid2">
-        <div><label class="f">Username (IG handle)</label><input class="f" id="f-username" placeholder="@username"></div>
-        <div><label class="f">Instagram link</label><input class="f" id="f-link" placeholder="instagram.com/..."></div>
+        <div><label class="f">Gebruikersnaam (IG)</label><input class="f" id="f-username" placeholder="@gebruikersnaam"></div>
+        <div><label class="f">Instagram-link</label><input class="f" id="f-link" placeholder="instagram.com/..."></div>
       </div>
 
       <div class="grid2">
         <div><label class="f">Funnel</label>
           <select class="f" id="f-funnel" onchange="onModalFunnel()">
-            <option value="">Auto (round-robin)</option>
-            <option value="video">🎥 Video</option>
+            <option value="">Automatisch (om-en-om)</option>
+            <option value="video">🎥 VSL</option>
             <option value="chat">💬 Chat</option>
           </select>
         </div>
@@ -592,7 +604,7 @@
 
       <div class="grid2">
         <div>
-          <label class="f" id="lblFups">Follow-ups sent</label>
+          <label class="f" id="lblFups">Follow-ups verstuurd</label>
           <input class="f" id="f-fups" type="number" min="0" value="0">
         </div>
         <div>
@@ -610,17 +622,17 @@
 
       <div class="grid2">
         <div>
-          <label class="f">Message language</label>
+          <label class="f">Berichttaal</label>
           <select class="f" id="f-lang">
-            <option value="">Use toolbar language</option>
-            <option value="nl">🇳🇱 Dutch</option>
-            <option value="en">🇬🇧 English</option>
+            <option value="">Standaardtaal gebruiken</option>
+            <option value="nl">🇳🇱 Nederlands</option>
+            <option value="en">🇬🇧 Engels</option>
           </select>
         </div>
         <div>
-          <label class="f">A/B test variant</label>
+          <label class="f">A/B-variant</label>
           <select class="f" id="f-variant">
-            <option value="">Auto (round-robin)</option>
+            <option value="">Automatisch (om-en-om)</option>
             <option value="A">Variant A</option>
             <option value="B">Variant B</option>
             <option value="C">Variant C</option>
@@ -628,20 +640,20 @@
         </div>
       </div>
 
-      <label class="f">Send video from (account)</label>
+      <label class="f">Account (waar het gesprek loopt)</label>
       <select class="f" id="f-account"></select>
 
-      <label class="f">Tracking flags (the metrics)</label>
+      <label class="f">Tracking (de metrics)</label>
       <div class="quickrow" id="flagRow"></div>
 
-      <label class="f">Notes</label>
-      <textarea class="f" id="f-notes" style="min-height:60px" placeholder="Reply gist, objections, where the bottleneck is..."></textarea>
+      <label class="f">Notities</label>
+      <textarea class="f" id="f-notes" style="min-height:60px" placeholder="Belangrijke info van de lead, bezwaren, wat helpt bij het closen..."></textarea>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost sm" id="delBtn" onclick="deleteLead()" style="border-color:var(--bad);color:var(--bad)">Delete</button>
+      <button class="btn ghost sm" id="delBtn" onclick="deleteLead()" style="border-color:var(--bad);color:var(--bad)">Verwijder</button>
       <div style="display:flex;gap:10px">
-        <button class="btn ghost" onclick="closeLead()">Cancel</button>
-        <button class="btn sig" onclick="saveLead()">Save Lead</button>
+        <button class="btn ghost" onclick="closeLead()">Annuleer</button>
+        <button class="btn sig" onclick="saveLead()">Opslaan</button>
       </div>
     </div>
   </div>
@@ -651,34 +663,34 @@
 <div class="scrim" id="impScrim">
   <div class="modal" style="max-width:640px">
     <div class="modal-h">
-      <h3>Import lead list</h3>
+      <h3>Leads importeren</h3>
       <button class="x" onclick="closeImport()">×</button>
     </div>
     <div class="modal-b">
       <div class="imp-tabs">
-        <button class="imp-tab active" data-imp="paste" onclick="impTab('paste')">Paste / type</button>
-        <button class="imp-tab" data-imp="file" onclick="impTab('file')">Upload CSV</button>
+        <button class="imp-tab active" data-imp="paste" onclick="impTab('paste')">Plakken / typen</button>
+        <button class="imp-tab" data-imp="file" onclick="impTab('file')">CSV uploaden</button>
         <button class="imp-tab" data-imp="sync" onclick="impTab('sync')">Auto-tracking</button>
         <button class="imp-tab" data-imp="migrate" onclick="impTab('migrate')">Oude data</button>
       </div>
 
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        <label class="f" style="margin:0">Add these leads to account</label>
+        <label class="f" style="margin:0">Leads toevoegen aan account</label>
         <div class="lang-toggle" id="impAcctToggle" style="flex:none"></div>
-        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Which of your accounts works this batch.</span>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Welk van je accounts deze batch doet.</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-        <label class="f" style="margin:0">Default language for these leads</label>
+        <label class="f" style="margin:0">Standaardtaal voor deze leads</label>
         <div class="lang-toggle" style="flex:none">
           <button class="lang-btn active" data-implang="nl" onclick="setImpLang('nl')">🇳🇱 NL</button>
           <button class="lang-btn" data-implang="en" onclick="setImpLang('en')">🇬🇧 EN</button>
         </div>
-        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Overridden by a “language” column if your file has one.</span>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Een "taal"-kolom in je bestand gaat vóór.</span>
       </div>
 
       <!-- paste -->
       <div class="imp-pane show" id="imp-paste">
-        <label class="f">One IG lead per line. Optional columns separated by comma or tab:<br><span style="text-transform:none;color:var(--ink)">name, profile link, phase, language</span></label>
+        <label class="f">Eén IG-lead per regel. Optionele kolommen gescheiden door komma of tab:<br><span style="text-transform:none;color:var(--ink)">naam, profiellink, fase, taal</span></label>
         <textarea class="f" id="imp-text" style="min-height:150px;font-family:'Space Mono',monospace;font-size:12px" placeholder="Max, instagram.com/max
 Sanne, instagram.com/sanne, engaged
 Tom
@@ -690,22 +702,21 @@ Lisa, instagram.com/lisa, booked"></textarea>
 
       <!-- file -->
       <div class="imp-pane" id="imp-file">
-        <label class="f">Upload a CSV from a scraper, Sheets, or your CRM export</label>
+        <label class="f">Upload een CSV uit een scraper, Sheets of je CRM-export</label>
         <div class="drop" id="dropZone">
           <input type="file" id="csvFile" accept=".csv,.txt,.tsv" style="display:none">
-          <div style="font-size:13px;margin-bottom:8px">Drop a CSV here, or</div>
-          <button class="btn ghost sm" onclick="document.getElementById('csvFile').click()">Choose file</button>
+          <div style="font-size:13px;margin-bottom:8px">Sleep een CSV hierheen, of</div>
+          <button class="btn ghost sm" onclick="document.getElementById('csvFile').click()">Kies bestand</button>
           <div id="csvName" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px"></div>
         </div>
-        <label class="f">Header mapping is auto-detected (name / platform / link / email / phase / seen / replied / booked).</label>
+        <label class="f">Kolommen worden automatisch herkend (naam / link / fase / taal).</label>
       </div>
 
       <!-- sync info -->
       <div class="imp-pane" id="imp-sync">
-        <div class="sync-row"><div><b>IG "media seen"</b><div class="sd2">No official API. Mark manually when you see the seen tick.</div></div><span class="badge man">Manual</span></div>
-        <div class="sync-row"><div><b>IG replies (cold)</b><div class="sd2">Cold outreach replies — mark with "↗ Replied" in the queue.</div></div><span class="badge man">Manual</span></div>
-        <div class="sync-row"><div><b>IG replies (inbound)</b><div class="sd2">IG Business API can auto-capture replies from people who DM you — Phase 2.</div></div><span class="badge auto">API later</span></div>
-        <div class="sync-note">Instagram has <b>no safe automated way</b> to track cold-DM "seen" or proactively send DMs — scrapers/bots risk a ban. So mark seen / replied / booked manually (one tap in the Follow-up Queue). Later we can connect the <b>IG Business API</b> to auto-capture <i>inbound</i> replies only.</div>
+        <div class="sync-row"><div><b>IG "media gezien"</b><div class="sd2">Geen officiële API. Markeer handmatig als je het gezien-vinkje ziet.</div></div><span class="badge man">Handmatig</span></div>
+        <div class="sync-row"><div><b>IG reacties (koud)</b><div class="sd2">Reacties op koude outreach — markeer met 📥 in de follow-up lijst.</div></div><span class="badge man">Handmatig</span></div>
+        <div class="sync-note">Instagram heeft <b>geen veilige geautomatiseerde manier</b> om koude DM's te tracken of te versturen — scrapers/bots riskeren een ban. Markeer gezien / gereageerd / geboekt dus handmatig (één tik in de follow-up lijst).</div>
       </div>
 
       <!-- migrate old localStorage data -->
@@ -727,10 +738,10 @@ Lisa, instagram.com/lisa, booked"></textarea>
       <div id="impPreview"></div>
     </div>
     <div class="modal-foot">
-      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)" id="impCount">0 leads ready</span>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)" id="impCount">0 leads klaar</span>
       <div style="display:flex;gap:10px">
-        <button class="btn ghost" onclick="closeImport()">Cancel</button>
-        <button class="btn sig" id="impBtn" onclick="runImport()" disabled>Import</button>
+        <button class="btn ghost" onclick="closeImport()">Annuleer</button>
+        <button class="btn sig" id="impBtn" onclick="runImport()" disabled>Importeer</button>
       </div>
     </div>
   </div>
@@ -770,11 +781,11 @@ Lisa, instagram.com/lisa, booked"></textarea>
 
 <script>
 const PHASES = {
-  // ---- video funnel (VSL-aanpak) ----
-  intent:  {label:'Intent',  color:'var(--intent)',  maxFup:3, funnel:'video', desc:'No reply yet · 3 follow-ups max'},
-  engaged: {label:'Engaged', color:'var(--engaged)', maxFup:8, funnel:'video', desc:'Showed interest · up to 8 follow-ups'},
-  booked:  {label:'Booked',  color:'var(--booked)',  maxFup:8, funnel:'video', desc:'Booking link sent · redirect to calendar'},
-  dead:    {label:'Dead / No',color:'var(--muted)',  maxFup:0, funnel:'video', desc:'Closed out · revisit in 180 days'},
+  // ---- VSL funnel ----
+  intent:  {label:'Intent',        color:'var(--intent)',  maxFup:3, funnel:'video', desc:'Nog geen reactie · max 3 follow-ups'},
+  engaged: {label:'Geïnteresseerd',color:'var(--engaged)', maxFup:8, funnel:'video', desc:'Interesse getoond · tot 8 follow-ups'},
+  booked:  {label:'Geboekt',       color:'var(--booked)',  maxFup:8, funnel:'video', desc:'Bookinglink gestuurd · alles wijst naar de agenda'},
+  dead:    {label:'Afgesloten',    color:'var(--muted)',   maxFup:0, funnel:'video', desc:'Gesloten · later opnieuw bekijken'},
   // ---- chat funnel (gesprek-aanpak, fase 1-5) ----
   c_new:   {label:'1 · Nieuwe lead',     color:'var(--intent)',  maxFup:3,  funnel:'chat', desc:'Opening gestuurd · wacht op reactie'},
   c_convo: {label:'2 · In gesprek',      color:'var(--engaged)', maxFup:8,  funnel:'chat', desc:'Actieve conversatie · stuur richting call'},
@@ -782,7 +793,7 @@ const PHASES = {
   c_booked:{label:'4 · Gepland/geboekt', color:'var(--booked)',  maxFup:0,  funnel:'chat', desc:'Call staat in de agenda'},
   c_closed:{label:'5 · Afgesloten',      color:'var(--muted)',   maxFup:99, funnel:'chat', desc:'Geen boeking/interesse · follow-up 1× per kwartaal'}
 };
-const FUNNELS = { video:{label:'🎥 Video', name:'Video'}, chat:{label:'💬 Chat', name:'Chat'} };
+const FUNNELS = { video:{label:'🎥 VSL', name:'VSL'}, chat:{label:'💬 Chat', name:'Chat'} };
 function leadFunnel(l){ return (l && (l.funnel==='chat'||l.funnel==='video')) ? l.funnel : 'video'; }
 function funnelPhases(fn){ return Object.keys(PHASES).filter(k=>PHASES[k].funnel===fn); }
 function funnelBadge(l){ const fn=leadFunnel(l); return `<span class="plat" title="Funnel">${FUNNELS[fn].label}</span>`; }
@@ -795,18 +806,18 @@ function assignFunnel(){
 
 // the tracking flags that drive the metrics (mirrors your Notion KPIs)
 const FLAGS = [
-  {key:'approached', label:'Approached'},
-  {key:'seen',       label:'Media seen'},
-  {key:'positive',   label:'Positive reply'},
-  {key:'booksent',   label:'Booking link sent'},
-  {key:'booked',     label:'Appointment booked'}
+  {key:'approached', label:'Benaderd'},
+  {key:'seen',       label:'Media gezien'},
+  {key:'positive',   label:'Positieve reactie'},
+  {key:'booksent',   label:'Bookinglink gestuurd'},
+  {key:'booked',     label:'Call geboekt'}
 ];
 
 const KPIS = [
-  {key:'MSR', name:'Media Seen Rate (MSR)', num:'seen',     den:'approached', kpi:60},
-  {key:'PRR', name:'Positive Reply Rate (PRR)', num:'positive', den:'approached', kpi:6},
-  {key:'BSR', name:'Booking Send Rate (BSR)', num:'booksent', den:'approached', kpi:3},
-  {key:'ABR', name:'Appointment Booking Rate (ABR)', num:'booked', den:'approached', kpi:2}
+  {key:'MSR', name:'Media gezien (MSR)', num:'seen',     den:'approached', kpi:60},
+  {key:'PRR', name:'Positieve reactie (PRR)', num:'positive', den:'approached', kpi:6},
+  {key:'BSR', name:'Booking gestuurd (BSR)', num:'booksent', den:'approached', kpi:3},
+  {key:'ABR', name:'Call geboekt (ABR)', num:'booked', den:'approached', kpi:2}
 ];
 
 const TOOLS = [
@@ -1039,13 +1050,13 @@ function setActiveAccount(v){
 /* inline "which account do I do this action from" picker for an action row */
 function accountSelectHTML(l){
   const cur=leadAccount(l);
-  return `<select class="acctsel" title="Account you're doing this from" onchange="setLeadAccount('${l.id}', this.value)">${
+  return `<select class="acctsel" title="Account waarvandaan je dit doet" onchange="setLeadAccount('${l.id}', this.value)">${
     accounts().map(a=>`<option value="${esc(a)}"${a===cur?' selected':''}>👤 @${esc(a)}</option>`).join('')
   }</select>`;
 }
 function renderAccountSwitcher(){
   const sel=document.getElementById('acctSwitch'); if(!sel) return;
-  sel.innerHTML = `<option value="all">All accounts</option>`+allAccounts().map(x=>`<option value="${esc(x)}">@${esc(x)}</option>`).join('')
+  sel.innerHTML = `<option value="all">Alle accounts</option>`+allAccounts().map(x=>`<option value="${esc(x)}">@${esc(x)}</option>`).join('')
     +`<option value="__edit">✎ accounts bewerken…</option>`;
   sel.value = state.activeAccount||'all';
 }
@@ -1105,13 +1116,13 @@ function renderMetrics(){
   const target = days ? state.goal*days*seats : null;  // null for "All" → no KPI judgment
   const meets = target!==null && outreaches>=target;
   const volCls = target===null ? 'neutral' : (meets?'ok':'under');
-  const volTxt = target===null ? 'total' : (meets?'on KPI':'below');
-  const rangeLbl = {'7':'7d','30':'30d','90':'90d'}[activeRange] || (activeRange==='all'?'all time':'custom');
+  const volTxt = target===null ? 'totaal' : (meets?'op doel':'eronder');
+  const rangeLbl = {'7':'7d','30':'30d','90':'90d'}[activeRange] || (activeRange==='all'?'alles':'eigen');
   html += `<div class="mcard ${target!==null&&!meets?'alert':''}">
-    <div class="label">Outreaches done · ${rangeLbl}</div>
+    <div class="label">Benaderd · ${rangeLbl}</div>
     <div class="val">${outreaches}</div>
-    <div class="kpi">${target!==null?`Target ${target}`:'no target'} <span class="tag ${volCls}">${volTxt}</span></div>
-    <div class="denom">${appToday} today · goal ${state.goal}/day</div>
+    <div class="kpi">${target!==null?`Doel ${target}`:'geen doel'} <span class="tag ${volCls}">${volTxt}</span></div>
+    <div class="denom">${appToday} vandaag · doel ${state.goal}/dag</div>
   </div>`;
   // rate KPI cards
   KPIS.forEach(k=>{
@@ -1120,13 +1131,13 @@ function renderMetrics(){
     const kMeets = pct >= k.kpi;
     const hasData = count(k.den)>0;
     const tagCls = !hasData?'neutral':(kMeets?'ok':'under');
-    const tagTxt = !hasData?'no data':(kMeets?'on target':'below');
+    const tagTxt = !hasData?'geen data':(kMeets?'op doel':'eronder');
     const alert = hasData && !kMeets;
     html += `<div class="mcard ${alert?'alert':''}">
       <div class="label">${k.name}</div>
       <div class="val">${hasData?fmtPct(r):'—'}</div>
       <div class="kpi">KPI ${k.kpi}% <span class="tag ${tagCls}">${tagTxt}</span></div>
-      <div class="denom">${count(k.num)} / ${count(k.den)} approached</div>
+      <div class="denom">${count(k.num)} / ${count(k.den)} benaderd</div>
     </div>`;
   });
   wrap.innerHTML = html;
@@ -1143,6 +1154,7 @@ function renderTeam(){
   const wrap = document.getElementById('teamStatsWrap'); if(!wrap) return;
   if(!me || me.role!=='owner'){ wrap.style.display='none'; return; }
   wrap.style.display='block';
+  const lbl=document.getElementById('teamRangeLbl'); if(lbl) lbl.textContent='— '+rangeLabel();
   const today = todayISO();
   const cnt = (ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
   const pct = (n,d)=> d ? (n/d*100).toFixed(0)+'%' : '—';
@@ -1185,11 +1197,32 @@ function renderDaily(){
   box.innerHTML = cells.map(c=>`<div class="dcell"><div class="dnum">${c.n}</div><div class="dlbl">${c.lbl}</div></div>`).join('');
 }
 
+/* ---------- ACTIE NODIG (dashboard) ---------- */
+function renderActions(){
+  const box = document.getElementById('actionCards'); if(!box) return;
+  const t = todayISO();
+  const vis = visibleLeads();
+  const fupsNow = vis.filter(l=> l.due && l.due<=t && !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached).length;
+  const stil = vis.filter(l=> l.lastMsgDate && !['dead','booked','c_booked','c_closed'].includes(l.phase)
+    && Math.round((new Date(t)-new Date(l.lastMsgDate))/86400000)>=2).length;
+  const toSend = vis.filter(l=> l.phase!=='dead' && !(l.flags && l.flags.approached)).length;
+  const card = (n, lbl, sub, view, alert)=>`
+    <div class="mcard ${alert&&n>0?'alert':''}" style="cursor:pointer" onclick="switchView('${view}')">
+      <div class="label">${lbl}</div>
+      <div class="val">${n}</div>
+      <div class="denom">${sub}</div>
+    </div>`;
+  box.innerHTML =
+    card(fupsNow, 'Follow-ups nu', 'due vandaag of te laat → Follow-ups', 'today', true) +
+    card(stil, '⚠ Stilgevallen gesprekken', '2+ dagen geen bericht → Follow-ups', 'today', true) +
+    card(toSend, 'Eerste DM te versturen', 'nieuwe leads wachten → Eerste DM', 'send', false);
+}
+
 /* ---------- BOTTLENECK INSIGHT ---------- */
 function renderInsight(){
   const box = document.getElementById('bottleneckInsight');
   if(count('approached')<10){
-    box.innerHTML = `<div class="insight"><span class="ico">!</span><div>Not enough data yet. At a 6% reply rate a streak of 25 no-replies is totally normal — <b>don't change anything until you have volume.</b> Keep approaching.</div></div>`;
+    box.innerHTML = `<div class="insight"><span class="ico">!</span><div>Nog niet genoeg data. Bij 6% reply rate is een reeks van 25 zonder reactie heel normaal — <b>verander niks tot je volume hebt.</b> Blijf benaderen.</div></div>`;
     return;
   }
   // find weakest stage relative to KPI
@@ -1199,24 +1232,24 @@ function renderInsight(){
     if(gap < worstGap){ worstGap=gap; worst=k; }
   });
   if(worstGap>=0){
-    box.innerHTML = `<div class="insight" style="background:var(--go-bg);border-color:var(--go)"><span class="ico" style="color:var(--go)">✓</span><div>Every stage is at or above KPI. <b>This is proof of concept.</b> If ABR ≥ 2%, stop tweaking — hire setters and scale the volume to the moon.</div></div>`;
+    box.innerHTML = `<div class="insight" style="background:var(--go-bg);border-color:var(--go)"><span class="ico" style="color:var(--go)">✓</span><div>Elke fase zit op of boven KPI. <b>Dit is proof of concept.</b> Bij ABR ≥ 2%: stop met sleutelen — schaal het volume op.</div></div>`;
   }else{
-    const fixes = {MSR:'Your initial stimulus / send-time is weak — fewer people even see it. Test a more novel opener or warm accounts.',
-      PRR:'People see it but don\'t bite. Sharpen the offer and the hook — sell the outcome, not the method.',
-      BSR:'They reply positive but you\'re not getting the link out. Tighten the engaged → booking transition (VSL under 2.5 min).',
-      ABR:'They get the link but don\'t book. The offer or the booking message is the choke point.'};
-    box.innerHTML = `<div class="insight"><span class="ico">▲</span><div><b>Bottleneck: ${worst.name}</b> — running ${fmtPct(ratio(worst.num,worst.den))} vs ${worst.kpi}% KPI. ${fixes[worst.key]}</div></div>`;
+    const fixes = {MSR:'Je opening / verzendtijd is zwak — te weinig mensen zien hem überhaupt. Test een verrassender opener of warm je accounts op.',
+      PRR:'Ze zien het maar happen niet. Scherp het aanbod en de hook aan — verkoop de uitkomst, niet de methode.',
+      BSR:'Ze reageren positief maar de link komt er niet uit. Strakker van gesprek → booking (VSL onder 2,5 min).',
+      ABR:'Ze krijgen de link maar boeken niet. Het aanbod of het bookingbericht is het knelpunt.'};
+    box.innerHTML = `<div class="insight"><span class="ico">▲</span><div><b>Knelpunt: ${worst.name}</b> — ${fmtPct(ratio(worst.num,worst.den))} vs ${worst.kpi}% KPI. ${fixes[worst.key]}</div></div>`;
   }
 }
 
 /* ---------- FUNNEL FLOW ---------- */
 function renderFunnel(){
   const stages = [
-    {label:'Approached', n:count('approached'), c:'var(--ink)'},
-    {label:'Seen', n:count('seen'), c:'var(--intent)'},
-    {label:'Positive reply', n:count('positive'), c:'var(--engaged)'},
-    {label:'Booking sent', n:count('booksent'), c:'var(--signal)'},
-    {label:'Booked', n:count('booked'), c:'var(--booked)'}
+    {label:'Benaderd', n:count('approached'), c:'var(--ink)'},
+    {label:'Gezien', n:count('seen'), c:'var(--intent)'},
+    {label:'Positieve reactie', n:count('positive'), c:'var(--engaged)'},
+    {label:'Booking gestuurd', n:count('booksent'), c:'var(--signal)'},
+    {label:'Geboekt', n:count('booked'), c:'var(--booked)'}
   ];
   const max = Math.max(1, stages[0].n);
   let html = '<div style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)">';
@@ -1234,8 +1267,8 @@ function renderFunnel(){
   const neg = count('negative'), pos = count('positive'), totRep = pos+neg;
   const posShare = totRep ? Math.round(pos/totRep*100) : 0;
   html += `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px;padding-top:14px;border-top:1.5px dashed var(--line);font-family:'Space Mono';font-size:11px">
-      <span style="text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--bad)">🚫 Negative replies</span>
-      <span style="color:var(--muted)">${neg}${totRep?` · ${posShare}% of ${totRep} replies were positive`:''}</span></div>`;
+      <span style="text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--bad)">🚫 Negatieve reacties</span>
+      <span style="color:var(--muted)">${neg}${totRep?` · ${posShare}% van ${totRep} reacties was positief`:''}</span></div>`;
   html += '</div>';
   document.getElementById('funnelFlow').innerHTML = html;
 }
@@ -1327,12 +1360,12 @@ function leadCardHTML(l){
   const due = dueBadge(l);
   const step = nextStep(l);
   return `<div class="lead" draggable="true" ondragstart="dragLead(event,'${l.id}')" ondragend="dragEnd(event)" onclick="openLead('${l.id}')">
-    <div class="ln">${esc(l.name||'(no name)')} ${due}</div>
+    <div class="ln">${esc(l.name||'(naamloos)')} ${due}</div>
     <div class="lm">${funnelBadge(l)}
       ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
       ${staleBadge(l)}
       ${convoLinkHTML(l)}
-      ${(l.flags&&l.flags.approached)?`<span class="fupbadge">FUP ${l.fups||0}/${PHASES[l.phase].maxFup}</span>`:`<span class="due today">to send</span>`}</div>
+      ${(l.flags&&l.flags.approached)?`<span class="fupbadge">FUP ${l.fups||0}/${PHASES[l.phase].maxFup}</span>`:`<span class="due today">te sturen</span>`}</div>
     <div class="card-step">→ ${step.tag}</div>
     ${quickFlagsHTML(l)}
   </div>`;
@@ -1341,7 +1374,7 @@ function dueBadge(l){
   if(!l.due || l.phase==='dead' || l.phase==='booked' || l.phase==='c_booked') return '';
   const today = todayISO();
   let cls='later', txt=l.due.slice(5);
-  if(l.due<=today){cls='today';txt='due';}
+  if(l.due<=today){cls='today';txt='nu';}
   else{ const diff=(new Date(l.due)-new Date(today))/86400000; if(diff<=2)cls='soon'; }
   return `<span class="due ${cls}">${txt}</span>`;
 }
@@ -1363,14 +1396,14 @@ function renderSend(){
   document.getElementById('cntSend').textContent = leads.length;
 
   let html = `<div class="qsummary">
-    <div><div class="qbig">${leads.length}</div><div class="qlabel">${leads.length===1?'lead waits':'leads wait'} for the first DM</div></div>
+    <div><div class="qbig">${leads.length}</div><div class="qlabel">${leads.length===1?'lead wacht':'leads wachten'} op de eerste DM</div></div>
     <div class="qmini" style="align-items:center;gap:14px">
-      <span>Not counted as approached until you mark the initial as sent.</span>
-      ${leads.length?`<button class="btn ghost sm" onclick="purgeNotSent()" style="border-color:var(--paper);color:var(--paper)" title="Delete every lead you haven't messaged">✕ Delete all ${leads.length}</button>`:''}
+      <span>Telt pas als benaderd wanneer je de eerste DM als verstuurd markeert.</span>
+      ${leads.length?`<button class="btn ghost sm" onclick="purgeNotSent()" style="border-color:var(--paper);color:var(--paper)" title="Verwijder elke lead die je nog niet hebt aangeschreven">✕ Verwijder alle ${leads.length}</button>`:''}
     </div>
   </div>`;
   if(!leads.length){
-    html += `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-top:14px">Nothing to send. Import a lead list — every new lead lands here first.</div>`;
+    html += `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-top:14px">Niks te versturen. Importeer een leadlijst — elke nieuwe lead landt hier eerst.</div>`;
     wrap.innerHTML = html; return;
   }
   html += '<div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">';
@@ -1391,28 +1424,28 @@ function sendRowHTML(l){
   return `<div class="lead" style="cursor:default;margin:0">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
       <div style="flex:1;min-width:0">
-        <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(no name)')}
-          ${vb}<span class="due today">initial not sent</span>${langSet?'':'<span class="due later" title="No language set on this lead — using toolbar default">lang?</span>'}</div>
+        <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(naamloos)')}
+          ${vb}<span class="due today">eerste DM niet verstuurd</span>${langSet?'':'<span class="due later" title="Geen taal ingesteld — gebruikt de standaardtaal">taal?</span>'}</div>
         <div class="lm">${l.funnel?funnelBadge(l):'<span class="plat" title="Funnel wordt round-robin toegewezen bij versturen">🎲 funnel: auto</span>'}
           ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
-          ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profile ↗</a>`:''}</div>
+          ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profiel ↗</a>`:''}</div>
       </div>
       <div style="display:flex;gap:7px;flex:none;flex-wrap:wrap;justify-content:flex-end;align-items:center">
         ${accountSelectHTML(l)}
         ${langToggle}
-        <button class="btn sig sm" onclick="markInitialSent('${l.id}')" title="You sent the first DM">✓ Initial sent</button>
-        <button class="btn ghost sm" onclick="openLead('${l.id}')">Edit</button>
-        <button class="btn ghost sm" onclick="skipLead('${l.id}')" style="border-color:var(--bad);color:var(--bad)" title="Delete this lead entirely — no follow-up">✕ Delete</button>
+        <button class="btn sig sm" onclick="markInitialSent('${l.id}')" title="Je hebt de eerste DM verstuurd">✓ Verstuurd</button>
+        <button class="btn ghost sm" onclick="openLead('${l.id}')">Bewerk</button>
+        <button class="btn ghost sm" onclick="skipLead('${l.id}')" style="border-color:var(--bad);color:var(--bad)" title="Verwijder deze lead volledig — geen follow-up">✕ Verwijder</button>
       </div>
     </div>
     <div class="stepbox">
-      <div class="step-tag"><span class="step-pin" style="background:var(--intent)"></span><b>Initial message${l.variant?` · Variant ${l.variant}`:''}</b> &nbsp;·&nbsp; <span style="color:var(--muted)">${lang==='nl'?'Dutch':'English'} · first DM</span></div>
+      <div class="step-tag"><span class="step-pin" style="background:var(--intent)"></span><b>Openingsbericht${l.variant?` · Variant ${l.variant}`:''}</b> &nbsp;·&nbsp; <span style="color:var(--muted)">${lang==='nl'?'Nederlands':'Engels'} · eerste DM</span></div>
       ${ txt
           ? `<div class="step-script"><span class="qscript-text">${txt}</span>
-               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${txt.replace(/"/g,'&quot;')}">Copy</button></div>`
-          : `<div class="step-script empty-script">No initial script yet — add it in the Scripts &amp; Chain tab.</div>` }
+               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${txt.replace(/"/g,'&quot;')}">Kopieer</button></div>`
+          : `<div class="step-script empty-script">Nog geen openingsscript — voeg toe in de Scripts-tab.</div>` }
       ${ gif
-          ? `<div class="qgif"><img src="${esc(gif)}" alt="gif"><button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(gif).replace(/"/g,'&quot;')}">Copy GIF URL</button></div>`
+          ? `<div class="qgif"><img src="${esc(gif)}" alt="gif"><button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(gif).replace(/"/g,'&quot;')}">Kopieer GIF</button></div>`
           : '' }
     </div>
   </div>`;
@@ -1450,9 +1483,9 @@ function markInbound(id){
 /* delete EVERY lead you haven't sent an initial message to (current account scope) */
 function purgeNotSent(){
   const targets = visibleLeads().filter(l=> l.phase!=='dead' && !(l.flags && l.flags.approached));
-  if(!targets.length){ alert('Nothing to delete — every lead here already got an initial message.'); return; }
-  const scope = (state.activeAccount && state.activeAccount!=='all') ? ' for @'+state.activeAccount : '';
-  if(!confirm('Delete all '+targets.length+' lead'+(targets.length===1?'':'s')+' you haven\'t sent an initial message to'+scope+'?\nThis is permanent.')) return;
+  if(!targets.length){ alert('Niks te verwijderen — elke lead hier heeft al een eerste DM gehad.'); return; }
+  const scope = (state.activeAccount && state.activeAccount!=='all') ? ' voor @'+state.activeAccount : '';
+  if(!confirm('Alle '+targets.length+' lead'+(targets.length===1?'':'s')+' zonder verstuurde eerste DM verwijderen'+scope+'?\nDit is definitief.')) return;
   const ids = new Set(targets.map(l=>l.id));
   state.leads = state.leads.filter(l=> !ids.has(l.id));
   saveState(); renderAll();
@@ -1493,18 +1526,18 @@ function quickFlagsHTML(l){
   const f = l.flags||{};
   const chip=(flag,label,extra)=>`<button class="qflag ${f[flag]?'on '+(extra||''):''}" onclick="event.stopPropagation();toggleLeadFlag('${l.id}','${flag}')">${f[flag]?'✓ ':''}${label}</button>`;
   return `<div class="qflags">
-    ${chip('seen','👁 Media seen')}
-    ${chip('positive','💬 Positive','pos')}
-    ${chip('negative','🚫 No / not interested','neg')}
-    ${chip('booksent','📅 Booking sent')}
-    ${chip('booked','✅ Booked','bk')}
+    ${chip('seen','👁 Media gezien')}
+    ${chip('positive','💬 Positief','pos')}
+    ${chip('negative','🚫 Geen interesse','neg')}
+    ${chip('booksent','📅 Booking gestuurd')}
+    ${chip('booked','✅ Geboekt','bk')}
   </div>`;
 }
 
 /* Skip = delete the lead entirely (no follow-up, gone from every view) */
 function skipLead(id){
   const l = state.leads.find(x=>x.id===id); if(!l) return;
-  if(!confirm('Delete '+(l.name?'"'+l.name+'"':'this lead')+'? It is removed completely — no follow-up.')) return;
+  if(!confirm((l.name?'"'+l.name+'"':'Deze lead')+' verwijderen? Volledig weg — geen follow-up.')) return;
   state.leads = state.leads.filter(x=>x.id!==id);
   saveState(); renderAll();
 }
@@ -1523,20 +1556,20 @@ function nextStep(l){
   if(l.phase==='intent'){
     if(!(l.flags && l.flags.approached)){
       const iv=initialScript(l.variant, leadLang(l));
-      return {tag:'Initial outreach — not sent', detail:'Send the first DM', script:iv.text, gif:iv.gif, num:0, max:3, initial:true};
+      return {tag:'Eerste DM — nog niet verstuurd', detail:'Stuur de eerste DM', script:iv.text, gif:iv.gif, num:0, max:3, initial:true};
     }
-    if(f<3)  return {tag:`Intent FUP ${f+1} / 3`, detail:'No reply yet · 3 max', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:3};
-    return {tag:'Intent — limit reached', detail:'3 follow-ups done. Stop or mark dead.', script:'', gif:'', num:f, max:3};
+    if(f<3)  return {tag:`Intent FUP ${f+1} / 3`, detail:'Nog geen reactie · max 3', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:3};
+    return {tag:'Intent — limiet bereikt', detail:'3 follow-ups gedaan. Stop of sluit af.', script:'', gif:'', num:f, max:3};
   }
   if(l.phase==='engaged'){
-    if(f===0) return {tag:'Send Evergreen VSL', detail:'They replied 👍 — send the video (<2.5 min)', script:S.vsl||'', gif:g('vsl'), num:0, max:8, vsl:true};
-    if(f<=8) return {tag:`Engaged FUP ${f} / 8`, detail:'Most reply on #2–#5', script:S['efup'+f]||'(add E-FUP '+f+' in Scripts)', gif:g('efup'+f), num:f, max:8};
-    return {tag:'Engaged — limit reached', detail:'8 follow-ups done.', script:'', gif:'', num:f, max:8};
+    if(f===0) return {tag:'Stuur de VSL', detail:'Ze reageerden 👍 — stuur de video (<2,5 min)', script:S.vsl||'', gif:g('vsl'), num:0, max:8, vsl:true};
+    if(f<=8) return {tag:`FUP ${f} / 8`, detail:'De meeste reageren op #2–#5', script:S['efup'+f]||'(voeg E-FUP '+f+' toe in Scripts)', gif:g('efup'+f), num:f, max:8};
+    return {tag:'Limiet bereikt', detail:'8 follow-ups gedaan.', script:'', gif:'', num:f, max:8};
   }
   if(l.phase==='booked'){
-    if(f===0) return {tag:'Send Booking message', detail:'Drop the calendar link', script:S.booking||'', gif:g('booking'), num:0, max:8};
-    if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'All roads → booking link', script:S['bfup'+f]||'(add B-FUP '+f+' in Scripts)', gif:g('bfup'+f), num:f, max:8};
-    return {tag:'Booking — limit reached', detail:'', script:'', gif:'', num:f, max:8};
+    if(f===0) return {tag:'Stuur het bookingbericht', detail:'Drop de agendalink', script:S.booking||'', gif:g('booking'), num:0, max:8};
+    if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'Alles wijst naar de bookinglink', script:S['bfup'+f]||'(voeg B-FUP '+f+' toe in Scripts)', gif:g('bfup'+f), num:f, max:8};
+    return {tag:'Booking — limiet bereikt', detail:'', script:'', gif:'', num:f, max:8};
   }
   // ---- chat funnel ----
   if(l.phase==='c_new'){
@@ -1572,9 +1605,9 @@ function renderDue(){
 
   // buckets
   const buckets = {
-    overdue:{title:'Overdue — chase these first', items:[], cls:'today'},
-    today:  {title:'Today', items:[], cls:'today'},
-    week:   {title:'This week', items:[], cls:'soon'},
+    overdue:{title:'Te laat — eerst deze', items:[], cls:'today'},
+    today:  {title:'Vandaag', items:[], cls:'today'},
+    week:   {title:'Deze week', items:[], cls:'soon'},
     later:  {title:'Later', items:[], cls:'later'}
   };
   due.forEach(l=>{
@@ -1592,17 +1625,17 @@ function renderDue(){
   let html = `<div class="qsummary">
     <div>
       <div class="qbig">${todayCount}</div>
-      <div class="qlabel">${todayCount===1?'lead needs':'leads need'} a follow-up right now</div>
+      <div class="qlabel">${todayCount===1?'lead heeft':'leads hebben'} nú een follow-up nodig</div>
     </div>
     <div class="qmini">
-      <span><b style="color:var(--bad)">${buckets.overdue.items.length}</b> overdue</span>
-      <span><b>${buckets.today.items.length}</b> today</span>
-      <span><b style="color:var(--warn)">${buckets.week.items.length}</b> this week</span>
+      <span><b style="color:var(--bad)">${buckets.overdue.items.length}</b> te laat</span>
+      <span><b>${buckets.today.items.length}</b> vandaag</span>
+      <span><b style="color:var(--warn)">${buckets.week.items.length}</b> deze week</span>
     </div>
   </div>`;
 
   if(due.length===0){
-    html += `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-top:14px">Nothing queued. Add a follow-up date on a lead (or hit "+ Follow-up") to put it in this list.</div>`;
+    html += `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-top:14px">Niks in de wachtrij. Zet een follow-up datum op een lead om hem hier te krijgen.</div>`;
     wrap.innerHTML = html; return;
   }
 
@@ -1622,10 +1655,10 @@ function dueRowHTML(l){
   const exhausted = (l.fups||0)>=max;
   const d = dayDiff(l.due);
   let when = l.due.slice(5);
-  if(d<0) when = Math.abs(d)+'d late';
-  else if(d===0) when = 'today';
-  else if(d===1) when = 'tomorrow';
-  else when = 'in '+d+'d';
+  if(d<0) when = Math.abs(d)+'d te laat';
+  else if(d===0) when = 'vandaag';
+  else if(d===1) when = 'morgen';
+  else when = 'over '+d+'d';
   const whenCls = d<0?'today':(d<=2?'soon':'later');
 
   const step = nextStep(l);
@@ -1634,7 +1667,7 @@ function dueRowHTML(l){
   return `<div class="lead" style="cursor:default;margin:0">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
       <div style="flex:1;min-width:0">
-        <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(no name)')}
+        <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(naamloos)')}
           <span class="due ${whenCls}">${when}</span>
           <span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></div>
         <div class="lm">${funnelBadge(l)}
@@ -1642,17 +1675,17 @@ function dueRowHTML(l){
           ${staleBadge(l)}
           ${l.variant?`<span class="vbadge ${l.variant}">Var ${l.variant}</span>`:''}
           <span class="plat">${leadLang(l)==='en'?'EN':'NL'}</span>
-          <span class="plat" style="border-color:var(--signal);color:var(--signal)" title="Send this follow-up from the same account as before">📤 from @${esc(leadAccount(l))}</span>
+          <span class="plat" style="border-color:var(--signal);color:var(--signal)" title="Stuur deze follow-up vanaf hetzelfde account als eerder">📤 via @${esc(leadAccount(l))}</span>
           <span class="fupbadge">FUP ${l.fups||0}/${max}</span>
-          ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profile ↗</a>`:''}
+          ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profiel ↗</a>`:''}
           ${convoLinkHTML(l)}
           ${l.notes?`<span style="color:var(--muted);font-size:10px">· ${esc(l.notes).slice(0,60)}</span>`:''}</div>
       </div>
       <div style="display:flex;gap:7px;flex:none;flex-wrap:wrap;justify-content:flex-end;align-items:center">
         ${accountSelectHTML(l)}
-        <button class="btn ghost sm" ${exhausted?'disabled':''} onclick="logFollowup('${l.id}')" title="Logged — schedule next">✓ Follow-up sent</button>
-        <button class="btn ghost sm" onclick="snooze('${l.id}',1)" title="Push one day">Snooze</button>
-        <button class="btn ghost sm" onclick="openLead('${l.id}')">Edit</button>
+        <button class="btn ghost sm" ${exhausted?'disabled':''} onclick="logFollowup('${l.id}')" title="Gelogd — volgende wordt ingepland">✓ Follow-up verstuurd</button>
+        <button class="btn ghost sm" onclick="snooze('${l.id}',1)" title="Schuif één dag op">Uitstel</button>
+        <button class="btn ghost sm" onclick="openLead('${l.id}')">Bewerk</button>
       </div>
     </div>
     ${quickFlagsHTML(l)}
@@ -1660,10 +1693,10 @@ function dueRowHTML(l){
       <div class="step-tag"><span class="step-pin" style="background:${PHASES[l.phase].color}"></span><b>${step.tag}</b>${step.detail?` &nbsp;·&nbsp; <span style="color:var(--muted)">${step.detail}</span>`:''}</div>
       ${ scriptText
           ? `<div class="step-script"><span class="qscript-text">${scriptText}</span>
-               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${scriptText.replace(/"/g,'&quot;')}">Copy</button></div>`
-          : `<div class="step-script empty-script">No script saved for this step — add it in the Scripts &amp; Chain tab.</div>` }
+               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${scriptText.replace(/"/g,'&quot;')}">Kopieer</button></div>`
+          : `<div class="step-script empty-script">Geen script voor deze stap — voeg toe in de Scripts-tab.</div>` }
       ${ step.gif
-          ? `<div class="qgif"><img src="${esc(step.gif)}" alt="gif"><button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(step.gif).replace(/"/g,'&quot;')}">Copy GIF URL</button></div>`
+          ? `<div class="qgif"><img src="${esc(step.gif)}" alt="gif"><button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(step.gif).replace(/"/g,'&quot;')}">Kopieer GIF</button></div>`
           : '' }
     </div>
   </div>`;
@@ -1675,7 +1708,7 @@ function copyScript(btn){
   document.body.appendChild(ta); ta.select();
   try{ document.execCommand('copy'); }catch(e){}
   document.body.removeChild(ta);
-  const old = btn.textContent; btn.textContent='Copied'; btn.classList.add('sig');
+  const old = btn.textContent; btn.textContent='Gekopieerd'; btn.classList.add('sig');
   setTimeout(()=>{ btn.textContent=old; btn.classList.remove('sig'); },1100);
 }
 
@@ -1727,18 +1760,18 @@ function renderTable(){
   const body = document.getElementById('leadBody');
   const vis = visibleLeads();
   document.getElementById('cntAll').textContent = vis.length;
-  if(vis.length===0){ body.innerHTML = `<tr><td colspan="8" class="empty">No leads yet${state.activeAccount&&state.activeAccount!=='all'?' for @'+esc(state.activeAccount):''}.</td></tr>`; return; }
+  if(vis.length===0){ body.innerHTML = `<tr><td colspan="8" class="empty">Nog geen leads${state.activeAccount&&state.activeAccount!=='all'?' voor @'+esc(state.activeAccount):''}.</td></tr>`; return; }
   let html='';
   vis.slice().sort((a,b)=>(a.due||'zzz')<(b.due||'zzz')?-1:1).forEach(l=>{
     html += `<tr class="row">
       <td><span class="statusdot"><span class="sd" style="background:${PHASES[l.phase].color}"></span>${PHASES[l.phase].label}</span></td>
-      <td><b>${esc(l.name||'—')}</b>${l.username?`<div style="font-family:'Space Mono';font-size:10px;color:var(--signal)">@${esc(l.username)}</div>`:''}${!(l.flags&&l.flags.approached)&&l.phase!=='dead'?`<div style="font-family:'Space Mono';font-size:9px;color:var(--bad)">⚠ initial not sent</div>`:''}</td>
-      <td><span class="plat">${l.platform}</span></td>
+      <td><b>${esc(l.name||'—')}</b>${l.username?`<div style="font-family:'Space Mono';font-size:10px;color:var(--signal)">@${esc(l.username)}</div>`:''}${!(l.flags&&l.flags.approached)&&l.phase!=='dead'?`<div style="font-family:'Space Mono';font-size:9px;color:var(--bad)">⚠ eerste DM niet verstuurd</div>`:''}</td>
+      <td>${funnelBadge(l)}</td>
       <td>${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">open ↗</a>`:'<span style="color:var(--muted)">—</span>'}</td>
       <td><span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></td>
       <td style="font-family:'Space Mono';font-size:12px">${l.fups||0}/${PHASES[l.phase].maxFup}</td>
       <td>${l.due?dueBadge(l)||l.due.slice(5):'<span style="color:var(--muted)">—</span>'}</td>
-      <td><button class="btn ghost sm" onclick="openLead('${l.id}')">Edit</button></td>
+      <td><button class="btn ghost sm" onclick="openLead('${l.id}')">Bewerk</button></td>
     </tr>`;
   });
   body.innerHTML = html;
@@ -1748,7 +1781,7 @@ function renderTable(){
 function openLead(id){
   editingId = id || null;
   const l = id ? state.leads.find(x=>x.id===id) : null;
-  document.getElementById('modalTitle').textContent = l?'Edit Lead':'New Lead';
+  document.getElementById('modalTitle').textContent = l?'Lead bewerken':'Nieuwe lead';
   document.getElementById('delBtn').style.display = l?'inline-block':'none';
   document.getElementById('f-name').value = l?.name||'';
   document.getElementById('f-plat').value = l?.platform||'Instagram';
@@ -1872,7 +1905,7 @@ function curScripts(){
 function escAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 function gifFieldHTML(key){
   return `<div class="gifrow"><span class="gico">🎞️</span>
-    <input class="gifinput" data-gif="${key}" placeholder="GIF-URL (Giphy/Tenor) — optional"></div>
+    <input class="gifinput" data-gif="${key}" placeholder="GIF-URL (Giphy/Tenor) — optioneel"></div>
     <div class="gifprev" data-gifprev="${key}"></div>`;
 }
 function blockHTML(label,key,nl,en,gif){
@@ -1891,10 +1924,10 @@ function buildScriptBlocks(){
     C:["{{first.name}}, ik help mensen zoals jij aan meer klanten. Mag ik je er 1 voorbeeld van sturen? Reageer met 👍.",
        "{{first.name}}, I help people like you get more clients. Mind if I send you one example? Reply 👍."]
   };
-  let initHtml = `<div class="meta">First DM — most important stimulus. Get a 👍 before pitching. <code>{{first.name}}</code> = the lead's name.</div>`;
+  let initHtml = `<div class="meta">Eerste DM — de belangrijkste stimulus. Krijg een 👍 vóór je pitcht. <code>{{first.name}}</code> = de naam van de lead.</div>`;
   activeVariants().forEach(v=>{
     const d = initDefaults[v]||["",""];
-    initHtml += `<div class="vedithead">Variant ${v}</div>` + blockHTML('Initial message · variant '+v, initialKey(v), d[0], d[1], true);
+    initHtml += `<div class="vedithead">Variant ${v}</div>` + blockHTML('Openingsbericht · variant '+v, initialKey(v), d[0], d[1], true);
   });
   document.getElementById('initialBlock').innerHTML = initHtml;
   // INTENT
@@ -1902,15 +1935,15 @@ function buildScriptBlocks(){
   h+=blockHTML('FUP 1','ifup1',"{{first.name}} 👀","{{first.name}} 👀",true);
   h+=blockHTML('FUP 2','ifup2',"Nog steeds benieuwd of dit interessant voor je is — 30 seconden waard?","Still keen to show you this — worth 30 seconds?",true);
   h+=blockHTML('FUP 3','ifup3',"Laatste reminder van mij — zal ik het sturen of niet?","Last nudge from me — want me to send it or no?",true);
-  h+=blockHTML('Negative reply response','neg',"Helemaal goed — fijne dag nog!","No worries at all — have a great one!",false);
+  h+=blockHTML('Reactie op negatief antwoord','neg',"Helemaal goed — fijne dag nog!","No worries at all — have a great one!",false);
   document.getElementById('intentFups').innerHTML=h;
   // ENGAGED
-  h=blockHTML('Evergreen VSL / video','vsl',"[loom link] — houd 'm onder 2,5 min.","[loom link] — keep under 2.5 min.",true);
+  h=blockHTML('VSL / video','vsl',"[loom link] — houd 'm onder 2,5 min.","[loom link] — keep under 2.5 min.",true);
   const eDef={1:["Heb je de video kunnen bekijken?","Did you get a chance to watch?"],2:["{{first.name}} 👀","{{first.name}} 👀"]};
   for(let i=1;i<=8;i++){ const d=eDef[i]||["",""]; h+=blockHTML('E-FUP '+i,'efup'+i,d[0],d[1],true); }
   document.getElementById('engagedFups').innerHTML=h;
   // BOOKED
-  h=blockHTML('Booking message','booking',"Top — kies een moment dat jou uitkomt: [booking link]","Perfect — grab any slot that works: [booking link]",true);
+  h=blockHTML('Bookingbericht','booking',"Top — kies een moment dat jou uitkomt: [booking link]","Perfect — grab any slot that works: [booking link]",true);
   const bDef={1:["Hier de link nog een keer: [booking link]","Here's the link again: [booking link]"],2:["Zullen we een moment inplannen?","Still want to lock in a time?"]};
   for(let i=1;i<=8;i++){ const d=bDef[i]||["",""]; h+=blockHTML('B-FUP '+i,'bfup'+i,d[0],d[1],true); }
   document.getElementById('bookedFups').innerHTML=h;
@@ -2002,8 +2035,8 @@ function renderPlaybook(){
 
 /* ---------- GOAL ---------- */
 function editGoal(){
-  const v = prompt('Daily approach target (volume is the game):', state.goal);
-  if(v && !isNaN(v)){ state.goal=parseInt(v); saveState(); renderMetrics(); }
+  const v = prompt('Dagelijks outreach-doel per persoon (volume wint):', state.goal);
+  if(v && !isNaN(v)){ state.goal=parseInt(v); saveState(); renderAll(); }
 }
 
 /* ---------- IMPORT ENGINE ---------- */
@@ -2134,7 +2167,7 @@ function autoGuessMap(){
 }
 
 function colLabel(c){
-  const head = (importHeader && importHeader[c]) ? importHeader[c] : 'Column '+(c+1);
+  const head = (importHeader && importHeader[c]) ? importHeader[c] : 'Kolom '+(c+1);
   const sample = importMatrix.slice(0,2).map(r=>(r[c]||'').trim()).filter(Boolean).join(', ').slice(0,26);
   return head + (sample? ' — '+sample : '');
 }
@@ -2145,19 +2178,19 @@ function renderMapping(){
   const cols = colCount();
   if(!cols){ box.innerHTML=''; return; }
   const opt = (sel, allowNone)=>{
-    let o = allowNone ? `<option value="-1"${sel===-1?' selected':''}>— none —</option>` : '';
+    let o = allowNone ? `<option value="-1"${sel===-1?' selected':''}>— geen —</option>` : '';
     for(let c=0;c<cols;c++) o += `<option value="${c}"${sel===c?' selected':''}>${esc(colLabel(c))}</option>`;
     return o;
   };
-  box.innerHTML = `<div class="imp-prev-h">Detected columns ${importHeader?'· header found':'· no header — guessed from content'} — fix any below</div>
+  box.innerHTML = `<div class="imp-prev-h">Herkende kolommen ${importHeader?'· kopregel gevonden':'· geen kopregel — geraden uit de inhoud'} — pas aan waar nodig</div>
     <div class="mapgrid">
-      <label class="f">Name<select class="f mapsel" data-map="name">${opt(importMap.name,false)}</select></label>
-      <label class="f">Username (IG handle)<select class="f mapsel" data-map="username">${opt(importMap.username,true)}</select></label>
-      <label class="f">Instagram link<select class="f mapsel" data-map="link">${opt(importMap.link,true)}</select></label>
-      <label class="f">Phase (optional)<select class="f mapsel" data-map="phase">${opt(importMap.phase,true)}</select></label>
-      <label class="f">Language (optional)<select class="f mapsel" data-map="lang">${opt(importMap.lang,true)}</select></label>
+      <label class="f">Naam<select class="f mapsel" data-map="name">${opt(importMap.name,false)}</select></label>
+      <label class="f">Gebruikersnaam (IG)<select class="f mapsel" data-map="username">${opt(importMap.username,true)}</select></label>
+      <label class="f">Instagram-link<select class="f mapsel" data-map="link">${opt(importMap.link,true)}</select></label>
+      <label class="f">Fase (optioneel)<select class="f mapsel" data-map="phase">${opt(importMap.phase,true)}</select></label>
+      <label class="f">Taal (optioneel)<select class="f mapsel" data-map="lang">${opt(importMap.lang,true)}</select></label>
     </div>
-    <div class="mapnote">Auto-detected. Wrong? Pick the right column. Link/Phase/Language can be “none” — leads with no language fall back to the default above (and you can flip NL/EN per lead later).</div>`;
+    <div class="mapnote">Automatisch herkend. Klopt het niet? Kies de juiste kolom. Link/Fase/Taal mogen "geen" zijn — leads zonder taal krijgen de standaardtaal hierboven (per lead later om te zetten).</div>`;
   box.querySelectorAll('.mapsel').forEach(s=> s.addEventListener('change', ()=>{
     importMap[s.dataset.map] = parseInt(s.value); applyMapping();
   }));
@@ -2199,7 +2232,7 @@ function showPreview(){
   updateImpCount();
   if(!importStaged.length){ box.innerHTML=''; return; }
   const dupes = importStaged.filter(isDup).length;
-  let html = `<div class="imp-prev-h">Preview — first ${Math.min(6,importStaged.length)} of ${importStaged.length}${dupes?` · <span style="color:var(--warn)">${dupes} already exist (will be skipped)</span>`:''}</div>`;
+  let html = `<div class="imp-prev-h">Voorbeeld — eerste ${Math.min(6,importStaged.length)} van ${importStaged.length}${dupes?` · <span style="color:var(--warn)">${dupes} bestaan al (worden overgeslagen)</span>`:''}</div>`;
   html += '<div class="imp-prev">';
   importStaged.slice(0,6).forEach(r=>{
     html += `<div class="imp-prow"><b>${esc(r.name)}</b>
@@ -2216,7 +2249,7 @@ function updateImpCount(){
   const n = importStaged.filter(r=>!isDup(r)).length;   // new (non-duplicate) leads
   const skip = total - n;
   document.getElementById('impCount').textContent =
-    n+' new lead'+(n===1?'':'s')+' ready'+(skip?` · ${skip} already exist (skipped)`:'');
+    n+' nieuwe lead'+(n===1?'':'s')+' klaar'+(skip?` · ${skip} bestaan al (overgeslagen)`:'');
   document.getElementById('impBtn').disabled = n===0;
 }
 
@@ -2241,7 +2274,7 @@ function runImport(){
   // land on the Initial Outreach tab if there are first DMs to send, else the queue
   const toSend = visibleLeads().some(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached));
   switchView(toSend ? 'send' : 'today');
-  setTimeout(()=>alert(`Imported ${added} new lead${added===1?'':'s'}`+(skipped?`, skipped ${skipped} that already exist`:'')+`.\nNew leads are in "Initial Outreach" — send their first DM, then mark it sent.`),100);
+  setTimeout(()=>alert(`${added} nieuwe lead${added===1?'':'s'} geïmporteerd`+(skipped?`, ${skipped} overgeslagen (bestonden al)`:'')+`.\nNieuwe leads staan in "Eerste DM" — verstuur de eerste DM en markeer als verstuurd.`),100);
 }
 
 /* ---------- MIGRATE old localStorage dmps-state ---------- */
@@ -2339,12 +2372,12 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 
 /* ---------- A/B TESTS view ---------- */
 const AB_MINSAMPLE = 20;
-function rangeLabel(){ return {'7':'last 7 days','30':'last 30 days','90':'last 90 days'}[activeRange] || (activeRange==='all'?'all time':'custom range'); }
+function rangeLabel(){ return {'7':'laatste 7 dagen','30':'laatste 30 dagen','90':'laatste 90 dagen'}[activeRange] || (activeRange==='all'?'alles':'eigen periode'); }
 function renderAB(){
   const box = document.getElementById('abBody'); if(!box) return;
   const vs = activeVariants();
   if(vs.length<2){
-    box.innerHTML = `<div class="abverdict">A/B testing is <b>off</b> — only Variant A is in rotation. Switch on <b>A/B</b> or <b>A/B/C</b> in the <a class="link" style="cursor:pointer" onclick="switchView('scripts')">Scripts &amp; Chain tab</a> to start comparing initial messages.</div>`;
+    box.innerHTML = `<div class="abverdict">A/B-testen staat <b>uit</b> — alleen variant A is in rotatie. Zet <b>A/B</b> of <b>A/B/C</b> aan in de <a class="link" style="cursor:pointer" onclick="switchView('scripts')">Scripts-tab</a> om openingsberichten te vergelijken.</div>`;
     return;
   }
   const stat = vs.map(v=>({
@@ -2360,7 +2393,7 @@ function renderAB(){
   let verdict='';
   const totalAppr = stat.reduce((a,s)=>a+s.appr,0);
   if(!eligible.length){
-    verdict = `<div class="abverdict">Collecting data — <b>${totalAppr}</b> lead${totalAppr===1?'':'s'} approached across ${vs.length} variants in the ${rangeLabel()}. Need ≥${AB_MINSAMPLE} per variant before calling a winner. Keep the rotation running and don't touch the messages yet — <b>data don't lie, but only with volume.</b></div>`;
+    verdict = `<div class="abverdict">Data verzamelen — <b>${totalAppr}</b> lead${totalAppr===1?'':'s'} benaderd over ${vs.length} varianten (${rangeLabel()}). Minimaal ${AB_MINSAMPLE} per variant nodig voor een winnaar. Laat de rotatie lopen en blijf van de berichten af — <b>data liegt niet, maar alleen met volume.</b></div>`;
   } else if(leader){
     const rest = eligible.filter(s=>s.v!==leader.v).sort((a,b)=>b.prr-a.prr);
     if(rest.length){
@@ -2368,11 +2401,11 @@ function renderAB(){
       const conf = propConfidence(leader.pos,leader.appr,r.pos,r.appr)*100;
       const lift = r.prr>0 ? ((leader.prr-r.prr)/r.prr*100) : 100;
       if(conf>=95)
-        verdict = `<div class="abverdict">✓ <b>Variant ${leader.v} wins.</b> ${fmtPct(leader.prr)} positive-reply rate vs ${fmtPct(r.prr)} for ${r.v} — a ${lift.toFixed(0)}% lift at ~${conf.toFixed(0)}% confidence. <b>Make ${leader.v} the new default</b> and start the next test.</div>`;
+        verdict = `<div class="abverdict">✓ <b>Variant ${leader.v} wint.</b> ${fmtPct(leader.prr)} positieve reacties vs ${fmtPct(r.prr)} voor ${r.v} — ${lift.toFixed(0)}% beter bij ~${conf.toFixed(0)}% zekerheid. <b>Maak ${leader.v} de nieuwe standaard</b> en start de volgende test.</div>`;
       else
-        verdict = `<div class="abverdict"><b>Variant ${leader.v} leads</b> at ${fmtPct(leader.prr)} PRR vs ${fmtPct(r.prr)} (${r.v}) — but only ~${conf.toFixed(0)}% confidence, not conclusive. Keep sending before you switch.</div>`;
+        verdict = `<div class="abverdict"><b>Variant ${leader.v} leidt</b> met ${fmtPct(leader.prr)} PRR vs ${fmtPct(r.prr)} (${r.v}) — maar pas ~${conf.toFixed(0)}% zekerheid, nog niet beslissend. Blijf versturen voor je wisselt.</div>`;
     } else {
-      verdict = `<div class="abverdict"><b>Variant ${leader.v}</b> has enough data (${leader.appr} approached); the other variant(s) don't yet. Keep the rotation balanced.</div>`;
+      verdict = `<div class="abverdict"><b>Variant ${leader.v}</b> heeft genoeg data (${leader.appr} benaderd); de andere variant(en) nog niet. Houd de rotatie in balans.</div>`;
     }
   }
 
@@ -2381,21 +2414,21 @@ function renderAB(){
   stat.forEach(s=>{
     const iv = initialScript(s.v);   // shown in toolbar language
     const win = leader && s.v===leader.v;
-    const need = s.appr<AB_MINSAMPLE ? `${AB_MINSAMPLE-s.appr} more for significance` : 'enough data';
+    const need = s.appr<AB_MINSAMPLE ? `${AB_MINSAMPLE-s.appr} meer nodig` : 'genoeg data';
     cards += `<div class="abcard ${win?'win':''}">
       <h4><span class="vbadge ${s.v}">${s.v}</span> Variant ${s.v}</h4>
-      <div class="abn">${s.appr} approached · ${need}</div>
-      <div class="abmsg">${iv.text?esc(iv.text):'<span style="color:var(--muted)">No message set — add it in Scripts.</span>'}</div>
-      <div class="abstat"><span class="k">Positive reply · PRR</span><span class="v primary">${s.appr?fmtPct(s.prr):'—'}</span></div>
-      <div class="abstat"><span class="k">Media seen · MSR</span><span class="v">${s.appr?fmtPct(s.msr):'—'}</span></div>
-      <div class="abstat"><span class="k">Booking sent · BSR</span><span class="v">${s.appr?fmtPct(s.bsr):'—'}</span></div>
-      <div class="abstat"><span class="k">Booked · ABR</span><span class="v">${s.appr?fmtPct(s.abr):'—'}</span></div>
-      <div class="abstat"><span class="k">Replied / sent</span><span class="v" style="font-size:11px">${s.pos} / ${s.appr}</span></div>
+      <div class="abn">${s.appr} benaderd · ${need}</div>
+      <div class="abmsg">${iv.text?esc(iv.text):'<span style="color:var(--muted)">Geen bericht ingesteld — voeg toe in Scripts.</span>'}</div>
+      <div class="abstat"><span class="k">Positieve reactie · PRR</span><span class="v primary">${s.appr?fmtPct(s.prr):'—'}</span></div>
+      <div class="abstat"><span class="k">Media gezien · MSR</span><span class="v">${s.appr?fmtPct(s.msr):'—'}</span></div>
+      <div class="abstat"><span class="k">Booking gestuurd · BSR</span><span class="v">${s.appr?fmtPct(s.bsr):'—'}</span></div>
+      <div class="abstat"><span class="k">Geboekt · ABR</span><span class="v">${s.appr?fmtPct(s.abr):'—'}</span></div>
+      <div class="abstat"><span class="k">Gereageerd / verstuurd</span><span class="v" style="font-size:11px">${s.pos} / ${s.appr}</span></div>
     </div>`;
   });
   cards += '</div>';
 
-  const note = `<div class="abctrl" style="margin-top:14px">Window: <b style="color:var(--ink)">${rangeLabel()}</b> (set on the Dashboard) · winner judged on PRR = positive replies ÷ approached · ≥${AB_MINSAMPLE}/variant needed. Edit variants in the <a class="link" style="cursor:pointer" onclick="switchView('scripts')">Scripts tab</a>.</div>`;
+  const note = `<div class="abctrl" style="margin-top:14px">Venster: <b style="color:var(--ink)">${rangeLabel()}</b> (instellen bij Statistieken) · winnaar beoordeeld op PRR = positieve reacties ÷ benaderd · ≥${AB_MINSAMPLE}/variant nodig. Varianten bewerken in de <a class="link" style="cursor:pointer" onclick="switchView('scripts')">Scripts-tab</a>.</div>`;
   box.innerHTML = verdict + cards + note;
 }
 
@@ -2432,7 +2465,7 @@ function renderFT(){
   stat.forEach(s=>{
     const isLead = eligible.length===2 && s.book===Math.max(chat.book,video.book) && chat.book!==video.book;
     const need = s.appr<FT_MINSAMPLE ? `${FT_MINSAMPLE-s.appr} meer nodig` : 'genoeg data';
-    const lbl = s.fn==='chat' ? ['Reply (→ in gesprek)','Call voorgesteld','Geboekt'] : ['Positive reply','Booking voorgesteld','Geboekt'];
+    const lbl = s.fn==='chat' ? ['Reactie (→ in gesprek)','Call voorgesteld','Geboekt'] : ['Positieve reactie','Booking voorgesteld','Geboekt'];
     cards += `<div class="abcard ${isLead?'win':''}">
       <h4>${FUNNELS[s.fn].label} funnel</h4>
       <div class="abn">${s.appr} benaderd · ${need}</div>
@@ -2458,7 +2491,7 @@ function setAbVariants(n){
 }
 
 /* ---------- render all ---------- */
-function renderAll(){ renderAccountSwitcher(); renderMetrics(); renderDaily(); renderInsight(); renderFunnel(); renderTeam(); renderSend(); renderBoard(); renderDue(); renderTable(); renderAB(); renderFT(); renderPlaybook(); }
+function renderAll(){ renderAccountSwitcher(); renderMetrics(); renderDaily(); renderActions(); renderInsight(); renderFunnel(); renderTeam(); renderSend(); renderBoard(); renderDue(); renderTable(); renderAB(); renderFT(); renderPlaybook(); }
 
 /* ---------- tabs ---------- */
 function switchView(v){
@@ -2501,12 +2534,12 @@ async function startApp(){
   renderAll();
 }
 function initUI(){
-  document.getElementById('todayStr').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+  document.getElementById('todayStr').textContent = new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'short'});
   renderPlaybook();
   bindScripts();
   document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===state.lang));
   wireImport();
-  document.querySelectorAll('.range-btn').forEach(b=>b.addEventListener('click',()=>setRange(b.dataset.range)));
+  document.querySelectorAll('#rangeToggle .range-btn').forEach(b=>b.addEventListener('click',()=>setRange(b.dataset.range)));
   document.getElementById('rangeFrom').addEventListener('change',e=>{customFrom=e.target.value; if(activeRange==='custom'){renderMetrics();renderInsight();renderFunnel();renderAB();}});
   document.getElementById('rangeTo').addEventListener('change',e=>{customTo=e.target.value; if(activeRange==='custom'){renderMetrics();renderInsight();renderFunnel();renderAB();}});
   document.querySelectorAll('#abVarToggle .range-btn').forEach(b=>{
