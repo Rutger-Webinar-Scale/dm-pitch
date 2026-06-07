@@ -460,8 +460,8 @@
   <section class="view" id="view-scripts">
     <div class="lang-bar">
       <div>
-        <div class="sec-h" style="margin:0">Scripts</div>
-        <div class="sec-sub" style="margin:2px 0 0">Instagram DM-scripts. Houd van elke stap een Nederlandse en Engelse versie bij.</div>
+        <div class="sec-h" style="margin:0">Scripts &amp; Hub</div>
+        <div class="sec-sub" style="margin:2px 0 0">Alles per fase: bericht, video's/links en follow-ups. De toggle schakelt álles tussen Nederlands en Engels.</div>
       </div>
       <div class="lang-toggle">
         <button class="lang-btn active" data-lang="nl" onclick="setLang('nl')">🇳🇱 NL</button>
@@ -469,46 +469,49 @@
       </div>
     </div>
 
-    <div class="sec-h" style="margin-top:22px">Openingsbericht</div>
-    <div class="abctrl">Varianten in rotatie:
-      <div class="range-toggle" id="abVarToggle">
-        <button class="range-btn" data-abn="1">Alleen A</button>
-        <button class="range-btn" data-abn="2">A / B</button>
-        <button class="range-btn" data-abn="3">A / B / C</button>
-      </div>
-      <span>"Alleen A" = één bericht, geen test.</span>
-    </div>
-    <div id="initialBlock" class="scard" style="margin-bottom:16px"></div>
+    <div class="mignote" style="margin-top:16px">📅 <b>Cadans:</b> follow-ups gaan altijd om de dag, exclusief weekend — ma → wo → vr → di. Het systeem plant de volgende datum automatisch.</div>
 
-    <div class="sec-h">De follow-up keten</div>
-    <div class="sec-sub">Elke follow-up is een eigen blok — precies één bericht per stuk.</div>
-    <div class="mignote">📅 <b>Cadans:</b> follow-ups gaan altijd om de dag, exclusief weekend — ma → wo → vr → di. Het systeem plant de volgende datum automatisch.</div>
-    <div class="chain">
+    <div class="chain" style="margin-top:16px">
       <div class="scard">
-        <h4><span class="phase-dot" style="background:var(--intent)"></span> Intent · I-FUP</h4>
-        <div class="meta">Geen reactie → max 3 follow-ups (3 is de sweet spot)</div>
+        <h4><span class="phase-dot" style="background:var(--intent)"></span> 1 · Initiële message</h4>
+        <div class="meta">De eerste DM + de initiële (Trojan Horse) video's. Daaronder de follow-ups.</div>
+        <div id="hub-initial"></div>
+        <div class="abctrl" style="margin:14px 0 8px">Varianten in rotatie:
+          <div class="range-toggle" id="abVarToggle">
+            <button class="range-btn" data-abn="1">Alleen A</button>
+            <button class="range-btn" data-abn="2">A / B</button>
+            <button class="range-btn" data-abn="3">A / B / C</button>
+          </div>
+        </div>
+        <div id="initialBlock"></div>
+        <div class="vedithead" style="margin-top:14px">Follow-ups initiële message</div>
         <div id="intentFups"></div>
       </div>
+
       <div class="scard">
-        <h4><span class="phase-dot" style="background:var(--engaged)"></span> Geïnteresseerd · E-FUP</h4>
-        <div class="meta">Interesse getoond → tot 8 follow-ups. De meeste reageren op #2–#5.</div>
+        <h4><span class="phase-dot" style="background:var(--engaged)"></span> 2 · VSL</h4>
+        <div class="meta">Ze reageerden 👍 → stuur de evergreen VSL + voice-note. Daaronder de follow-ups.</div>
+        <div id="hub-vsl"></div>
+        <div class="vedithead" style="margin-top:14px">Follow-ups VSL</div>
         <div id="engagedFups"></div>
       </div>
+
       <div class="scard">
-        <h4><span class="phase-dot" style="background:var(--booked)"></span> Geboekt · B-FUP</h4>
-        <div class="meta">Bookinglink gestuurd → elke follow-up wijst naar de agenda.</div>
+        <h4><span class="phase-dot" style="background:var(--booked)"></span> 3 · Booking</h4>
+        <div class="meta">Stuur de calendar link + voice-note. Daaronder de follow-ups — alles wijst naar de agenda.</div>
+        <div id="hub-booking"></div>
+        <div class="vedithead" style="margin-top:14px">Follow-ups booking</div>
         <div id="bookedFups"></div>
       </div>
+    </div>
+
+    <div class="chain" style="margin-top:16px;grid-template-columns:1fr">
       <div class="scard">
         <h4>💬 Chat funnel</h4>
         <div class="meta">Vrij chatten — geen vaste scripts. Alleen de kwartaal check-in (afgesloten leads) heeft er één.</div>
         <div id="chatFups"></div>
       </div>
     </div>
-
-    <div class="sec-h" style="margin-top:34px">Setter Hub — video's &amp; links</div>
-    <div class="sec-sub">Alle vaste assets op één plek, gedeeld met het hele team. De juiste link verschijnt automatisch als kopieerknop bij de stap in de werklijst waar hij hoort.</div>
-    <div class="toolwrap" id="toolsWrap"></div>
   </section>
 
   <div class="footer">
@@ -764,20 +767,13 @@ const KPIS = [
 ];
 
 const TOOLS = [
-  {key:'th_allround_nl',   type:'media', accept:'video/*,image/*', name:'🇳🇱 Trojan Horse — All-round',    desc:'Toestemmingsvideo, algemene versie (NL)'},
-  {key:'th_allround_en',   type:'media', accept:'video/*,image/*', name:'🇬🇧 Trojan Horse — All-round',    desc:'Toestemmingsvideo, algemene versie (EN)'},
-  {key:'th_leadmagnet_nl', type:'media', accept:'video/*,image/*', name:'🇳🇱 Trojan Horse — Lead Magnet',  desc:'Versie voor lead-magnet leads (NL)'},
-  {key:'th_leadmagnet_en', type:'media', accept:'video/*,image/*', name:'🇬🇧 Trojan Horse — Lead Magnet',  desc:'Versie voor lead-magnet leads (EN)'},
-  {key:'th_follower_nl',   type:'media', accept:'video/*,image/*', name:'🇳🇱 Trojan Horse — New Follower', desc:'Versie voor nieuwe volgers (NL)'},
-  {key:'th_follower_en',   type:'media', accept:'video/*,image/*', name:'🇬🇧 Trojan Horse — New Follower', desc:'Versie voor nieuwe volgers (EN)'},
-  {key:'video_nl',         type:'media', accept:'video/*',         name:'🇳🇱 Evergreen VSL',               desc:'De evergreen video sales letter (NL) — houd \'m onder 2,5 min'},
-  {key:'video_en',         type:'media', accept:'video/*',         name:'🇬🇧 Evergreen VSL',               desc:'De evergreen video sales letter (EN) — houd \'m onder 2,5 min'},
-  {key:'vn_vsl_nl',        type:'media', accept:'audio/*',         name:'🇳🇱 Voice-note bij VSL',          desc:'Pro-tip: stuur als spraakmemo — converteert beter (NL)'},
-  {key:'vn_vsl_en',        type:'media', accept:'audio/*',         name:'🇬🇧 Voice-note bij VSL',          desc:'Pro-tip: stuur als spraakmemo — converteert beter (EN)'},
-  {key:'booking_nl',       type:'link',  tool:'iClosed',           name:'🇳🇱 Calendar link',               desc:'Agendalink voor Nederlandse leads'},
-  {key:'booking_en',       type:'link',  tool:'iClosed',           name:'🇬🇧 Calendar link',               desc:'Agendalink voor Engelse leads'},
-  {key:'vn_booking_nl',    type:'media', accept:'audio/*',         name:'🇳🇱 Voice-note bij calendar link',desc:'Pro-tip: stuur als spraakmemo — converteert beter (NL)'},
-  {key:'vn_booking_en',    type:'media', accept:'audio/*',         name:'🇬🇧 Voice-note bij calendar link',desc:'Pro-tip: stuur als spraakmemo — converteert beter (EN)'}
+  {base:'th_allround',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video — All-round',    desc:'Toestemmingsvideo, algemene versie'},
+  {base:'th_leadmagnet', stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video — Lead Magnet',  desc:'Versie voor lead-magnet leads'},
+  {base:'th_follower',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video — New Follower', desc:'Versie voor nieuwe volgers'},
+  {base:'video',         stage:'vsl',     type:'media', accept:'video/*',         name:'Evergreen VSL',                 desc:'Houd \'m onder 2,5 min'},
+  {base:'vn_vsl',        stage:'vsl',     type:'media', accept:'audio/*',         name:'Voice-note bij VSL',            desc:'Pro-tip: stuur als spraakmemo — converteert beter'},
+  {base:'booking',       stage:'booking', type:'link',  tool:'iClosed',           name:'Calendar link',                 desc:'De agendalink voor deze taal'},
+  {base:'vn_booking',    stage:'booking', type:'media', accept:'audio/*',         name:'Voice-note bij calendar link',  desc:'Pro-tip: stuur als spraakmemo — converteert beter'}
 ];
 
 let state = { leads:[], scripts:{nl:{},en:{}}, goal:30, lang:'nl' };
@@ -1971,39 +1967,52 @@ function renderPlaybook(){
     if(links[k] && !links[k+'_nl']){ links[k+'_nl']=links[k]; delete links[k]; migrated=true; }
   });
   if(migrated){ state.toolLinks=links; saveState(); }
+
+  const sfx = state.lang==='en' ? '_en' : '_nl';
+  const flag = state.lang==='en' ? '🇬🇧' : '🇳🇱';
   const copyBtn = url=> `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">Kopieer link</button>`;
-  document.getElementById('toolsWrap').innerHTML = TOOLS.map(t=>{
-    const url = links[t.key]||'';
+  const stages = {initial:'', vsl:'', booking:''};
+
+  TOOLS.forEach(t=>{
+    const key = t.base + sfx;
+    const url = links[key]||'';
     let body='';
     if(t.type==='media'){
       let prev='';
       if(url){
         const kind = mediaKind(url);
-        if(kind==='video') prev = `<video controls preload="metadata" style="width:100%;max-height:260px;border-radius:10px;background:#000" src="${esc(url)}"></video>`;
-        else if(kind==='img') prev = `<img src="${esc(url)}" style="max-width:100%;max-height:260px;border-radius:10px;display:block">`;
+        if(kind==='video') prev = `<video controls preload="metadata" style="width:100%;max-height:220px;border-radius:9px;background:#000" src="${esc(url)}"></video>`;
+        else if(kind==='img') prev = `<img src="${esc(url)}" style="max-width:100%;max-height:220px;border-radius:9px;display:block">`;
         else if(kind==='audio') prev = `<audio controls style="width:100%" src="${esc(url)}"></audio>`;
-        else prev = `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${esc(url).slice(0,50)}…</a>`;
+        else prev = `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${esc(url).slice(0,40)}…</a>`;
       }
-      body = `${prev?`<div style="width:100%;margin-top:4px">${prev}</div>`:''}
-        <div style="display:flex;gap:7px;align-items:center;width:100%;flex-wrap:wrap">
-          <input type="file" accept="${t.accept}" style="display:none" id="up-${t.key}" onchange="uploadAsset('${t.key}',this)">
-          <button class="btn ghost sm" onclick="document.getElementById('up-${t.key}').click()">⇪ ${url?'Vervang':'Upload'}</button>
-          <span class="sd2" id="upmsg-${t.key}"></span>
+      body = `${prev?`<div style="margin:7px 0">${prev}</div>`:''}
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input type="file" accept="${t.accept}" style="display:none" id="up-${key}" onchange="uploadAsset('${key}',this)">
+          <button class="btn ghost sm" onclick="document.getElementById('up-${key}').click()">⇪ ${url?'Vervang':'Upload'}</button>
+          <span class="sd2" id="upmsg-${key}"></span>
           ${url?copyBtn(url):''}
-          ${url?`<button class="btn ghost sm" style="border-color:var(--bad);color:var(--bad)" onclick="removeAsset('${t.key}')">✕</button>`:''}
+          ${url?`<button class="btn ghost sm" style="border-color:var(--bad);color:var(--bad)" onclick="removeAsset('${key}')">✕</button>`:''}
         </div>`;
     } else {
-      body = `<div style="display:flex;gap:7px;align-items:center;width:100%">
-          <input class="gifinput" style="flex:1" data-toollink="${t.key}" placeholder="Plak hier je ${t.tool}-link…" value="${esc(url)}">
+      body = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:140px" data-toollink="${key}" placeholder="Plak hier je ${t.tool}-link (${state.lang.toUpperCase()})…" value="${esc(url)}">
           ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
           ${url?copyBtn(url):''}
         </div>`;
     }
-    return `<div class="tool" style="flex-wrap:wrap">
-      <div style="flex:1;min-width:180px"><div class="tn">${t.name}</div><div class="td">${t.desc}</div></div>
+    stages[t.stage] += `<div class="fupblock">
+      <span class="tag">${flag} ${t.name}</span>
+      <div class="sd2" style="margin-bottom:2px">${t.desc}</div>
       ${body}
     </div>`;
-  }).join('');
+  });
+
+  ['initial','vsl','booking'].forEach(st=>{
+    const el = document.getElementById('hub-'+st);
+    if(el) el.innerHTML = stages[st];
+  });
+
   document.querySelectorAll('[data-toollink]').forEach(inp=>{
     inp.addEventListener('input',()=>{
       state.toolLinks = state.toolLinks||{};
