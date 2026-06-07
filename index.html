@@ -1291,31 +1291,31 @@ function moveLeadPhase(id, phase){
   if(phase==='engaged'){
     l.flags.approached = l.flags.seen = l.flags.positive = true;
     l.fups = 0;
-    const d=new Date(); d.setDate(d.getDate()+1); l.due = d.toISOString().slice(0,10);
+    l.due = nextFupDate();
   } else if(phase==='booked'){
     l.flags.approached = l.flags.seen = l.flags.positive = l.flags.booksent = l.flags.booked = true;
     l.fups = 0; l.due = '';
   } else if(phase==='intent'){
     l.flags.approached = true;        // it's in the board, so it's been sent
-    if(!l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due = d.toISOString().slice(0,10); }
+    if(!l.due) l.due = nextFupDate();
   } else if(phase==='c_new'){
     l.flags.approached = true;
-    if(!l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due = d.toISOString().slice(0,10); }
+    if(!l.due) l.due = nextFupDate();
   } else if(phase==='c_convo'){
     l.flags.approached = l.flags.positive = true;
     l.fups = 0;
-    const d=new Date(); d.setDate(d.getDate()+1); l.due = d.toISOString().slice(0,10);
+    l.due = nextFupDate();
   } else if(phase==='c_call'){
     l.flags.approached = l.flags.positive = l.flags.booksent = true;
     l.fups = 0;
-    const d=new Date(); d.setDate(d.getDate()+2); l.due = d.toISOString().slice(0,10);
+    l.due = nextFupDate();
   } else if(phase==='c_booked'){
     l.flags.approached = l.flags.positive = l.flags.booksent = l.flags.booked = true;
     l.fups = 0; l.due = '';
   } else if(phase==='c_closed'){
     // afgesloten → langetermijn follow-up: 1× per kwartaal
     l.fups = 0;
-    const d=new Date(); d.setDate(d.getDate()+90); l.due = d.toISOString().slice(0,10);
+    l.due = addDaysSkipWeekend(90);
   }
   stampFlagDates(l);
   saveState(); renderAll();
@@ -1454,7 +1454,7 @@ function markInitialSent(id){
   l.lastMsgDate = todayISO();              // outbound bericht = laatste berichtdatum
   l.phase = leadFunnel(l)==='chat' ? 'c_new' : 'intent';
   l.fups = 0;
-  const d = new Date(); d.setDate(d.getDate()+intentGap(0)); l.due = d.toISOString().slice(0,10);
+  l.due = nextFupDate();
   stampFlagDates(l);
   saveState(); renderAll();
 }
@@ -1488,13 +1488,13 @@ function toggleLeadFlag(id, flag){
     // turning a flag on implies the earlier funnel steps happened + advances the phase
     if(flag==='booked'){ l.flags.approached=l.flags.seen=l.flags.positive=l.flags.booksent=true; l.flags.negative=false; l.phase='booked'; l.fups=0; l.due=''; }
     else if(flag==='booksent'){ l.flags.approached=l.flags.seen=l.flags.positive=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; } }
-    else if(flag==='positive'){ l.flags.approached=l.flags.seen=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; const d=new Date(); d.setDate(d.getDate()+1); l.due=d.toISOString().slice(0,10); } }
+    else if(flag==='positive'){ l.flags.approached=l.flags.seen=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; l.due=nextFupDate(); } }
     else if(flag==='negative'){ l.flags.approached=l.flags.seen=true; l.flags.positive=l.flags.booksent=l.flags.booked=false; l.phase='dead'; l.due=''; if(!l.negativeDate) l.negativeDate=todayISO(); }
     else if(flag==='seen'){ l.flags.approached=true; }
     stampFlagDates(l);
   } else {
     // turning a flag back off — undo the side-effects where it makes sense
-    if(flag==='negative' && l.phase==='dead'){ l.phase = l.flags.positive?'engaged':'intent'; if(l.flags.approached && !l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due=d.toISOString().slice(0,10); } }
+    if(flag==='negative' && l.phase==='dead'){ l.phase = l.flags.positive?'engaged':'intent'; if(l.flags.approached && !l.due){ l.due=nextFupDate(); } }
   }
   saveState(); renderAll();
 }
@@ -1646,6 +1646,7 @@ function snooze(id,n){
   const l = state.leads.find(x=>x.id===id); if(!l) return;
   const base = l.due && l.due>todayISO() ? new Date(l.due) : new Date();
   base.setDate(base.getDate()+n);
+  while(base.getDay()===0 || base.getDay()===6) base.setDate(base.getDate()+1);   // weekend overslaan
   l.due = base.toISOString().slice(0,10);
   saveState(); renderAll();
 }
@@ -1663,9 +1664,19 @@ function markReplied(id){
   saveState(); renderAll();
 }
 
-/* cold (intent) cadence: initial→FUP1 +1d, FUP1→FUP2 +3d, FUP2→FUP3 +5d */
-const INTENT_GAPS = [1,3,5];
-function intentGap(fups){ return INTENT_GAPS[fups] || 5; }
+/* cadans: ALLE follow-ups om de dag, exclusief weekend → ma→wo→vr→di→do→ma... */
+function addWorkdays(n){
+  const d = new Date();
+  let left = n;
+  while(left>0){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0 && w!==6) left--; }
+  return d.toISOString().slice(0,10);
+}
+function nextFupDate(){ return addWorkdays(2); }                 // om de dag (2 werkdagen verder)
+function addDaysSkipWeekend(n){                                  // voor de kwartaal check-in
+  const d = new Date(); d.setDate(d.getDate()+n);
+  while(d.getDay()===0 || d.getDay()===6) d.setDate(d.getDate()+1);
+  return d.toISOString().slice(0,10);
+}
 
 /* one-click follow-up: increment count, push next due date, snap timing */
 function logFollowup(id){
@@ -1676,10 +1687,8 @@ function logFollowup(id){
   l.fups = (l.fups||0)+1;
   l.lastMsgDate = todayISO();              // outbound follow-up = laatste bericht
   l.lastFupDate = todayISO();
-  // intent/c_new follow INTENT_GAPS (1/3/5d), c_closed = kwartaal (90d), rest 2d
-  const spacingDays = (l.phase==='intent'||l.phase==='c_new') ? intentGap(l.fups) : (l.phase==='c_closed' ? 90 : 2);
-  const d = new Date(); d.setDate(d.getDate()+spacingDays);
-  l.due = d.toISOString().slice(0,10);
+  // om de dag, exclusief weekend; kwartaal check-in = 90 dagen
+  l.due = l.phase==='c_closed' ? addDaysSkipWeekend(90) : nextFupDate();
   if(l.fups>=max) l.due = ''; // exhausted, clear queue
   saveState(); renderAll();
 }
