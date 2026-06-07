@@ -96,7 +96,9 @@
 
   /* ---- pipeline board ---- */
   .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}
-  @media(max-width:900px){.board{grid-template-columns:1fr}}
+  .board.cols5{grid-template-columns:repeat(5,1fr);gap:12px}
+  @media(max-width:1150px){.board.cols5{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:900px){.board,.board.cols5{grid-template-columns:1fr}}
   .col{background:var(--paper-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;min-height:200px}
   .col-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .col-h .name{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:8px}
@@ -148,11 +150,18 @@
   /* ---- stage stepper inside modal ---- */
   .stepper{display:flex;gap:6px;margin:8px 0 4px}
   .step{flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:8px 4px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-weight:700;color:var(--muted);background:var(--paper)}
-  .step.on{color:var(--paper)}
-  .step[data-ph="intent"].on{background:var(--intent);border-color:var(--intent)}
-  .step[data-ph="engaged"].on{background:var(--engaged);border-color:var(--engaged)}
-  .step[data-ph="booked"].on{background:var(--booked);border-color:var(--booked)}
-  .step[data-ph="dead"].on{background:var(--muted);border-color:var(--muted)}
+  .step.on{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+  .step[data-ph="intent"].on,.step[data-ph="c_new"].on{background:var(--intent);border-color:var(--intent)}
+  .step[data-ph="engaged"].on,.step[data-ph="c_convo"].on{background:var(--engaged);border-color:var(--engaged)}
+  .step[data-ph="c_call"].on{background:var(--signal);border-color:var(--signal)}
+  .step[data-ph="booked"].on,.step[data-ph="c_booked"].on{background:var(--booked);border-color:var(--booked)}
+  .step[data-ph="dead"].on,.step[data-ph="c_closed"].on{background:var(--muted);border-color:var(--muted)}
+  .stale{font-family:'Space Mono',monospace;font-size:9px;background:var(--bad);color:#fff;border-radius:20px;padding:2px 7px;font-weight:700}
+  .daily{display:flex;gap:0;background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-bottom:20px;overflow:hidden;flex-wrap:wrap;box-shadow:var(--shadow)}
+  .daily .dcell{flex:1;min-width:110px;padding:13px 14px;border-right:1px solid var(--line);text-align:center}
+  .daily .dcell:last-child{border-right:none}
+  .daily .dnum{font-family:'Fraunces',serif;font-size:26px;font-weight:600;line-height:1}
+  .daily .dlbl{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px;line-height:1.3}
 
   .quickrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
@@ -358,6 +367,7 @@
     <button class="tab" data-view="all">Lead List (ALL) <span class="count" id="cntAll">0</span></button>
     <button class="tab" data-view="scripts">Scripts &amp; Chain</button>
     <button class="tab" data-view="ab">A/B Tests</button>
+    <button class="tab" data-view="ft">Funnel Test</button>
     <button class="tab" data-view="playbook">Playbook</button>
   </nav>
 
@@ -371,6 +381,8 @@
       <div class="bar"><i id="appBar" style="width:0%"></i></div>
       <button class="btn ghost sm" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Set target</button>
     </div>
+
+    <div class="daily" id="dailyStrip"></div>
 
     <div class="rangebar">
       <span class="range-label">Metrics window</span>
@@ -409,9 +421,17 @@
 
   <!-- ================= PIPELINE ================= -->
   <section class="view" id="view-pipe">
-    <div class="sec-h">The Stimuli Chain</div>
-    <div class="sec-sub">Human + Stimuli = Action. Move every lead through 3 phases until appointment booked.</div>
-    <div class="board" id="board"></div>
+    <div class="lang-bar">
+      <div>
+        <div class="sec-h" style="margin:0">Pipelines</div>
+        <div class="sec-sub" style="margin:2px 0 0" id="pipeDesc">Sleep leads tussen de fases. Switch tussen de twee funnels die je test.</div>
+      </div>
+      <div class="range-toggle" id="funnelToggle">
+        <button class="range-btn active" data-fn="video" onclick="setFunnelView('video')">🎥 Video</button>
+        <button class="range-btn" data-fn="chat" onclick="setFunnelView('chat')">💬 Chat</button>
+      </div>
+    </div>
+    <div class="board" id="board" style="margin-top:14px"></div>
   </section>
 
   <!-- ================= FOLLOW-UP QUEUE ================= -->
@@ -480,6 +500,11 @@
         <div class="meta">Booking link sent → all follow-ups redirect to the calendar.</div>
         <div id="bookedFups"></div>
       </div>
+      <div class="scard">
+        <h4>💬 Chat funnel</h4>
+        <div class="meta">Vrij chatten — geen vaste scripts. Alleen de kwartaal check-in (afgesloten leads) heeft er één.</div>
+        <div id="chatFups"></div>
+      </div>
     </div>
   </section>
 
@@ -488,6 +513,13 @@
     <div class="sec-h">A/B Test — initial message</div>
     <div class="sec-sub">The first DM is the biggest lever on reply rate. Run variants head-to-head; every new lead is auto-assigned one (round-robin). Compared within the dashboard time window.</div>
     <div id="abBody"></div>
+  </section>
+
+  <!-- ================= FUNNEL TEST ================= -->
+  <section class="view" id="view-ft">
+    <div class="sec-h">Funnel Test — 💬 Chat vs 🎥 Video</div>
+    <div class="sec-sub">Nieuwe leads worden om-en-om verdeeld (round-robin). Vergeleken op fase-conversies binnen het dashboard-tijdvenster: reply → call/booking voorgesteld → geboekt.</div>
+    <div id="ftBody"></div>
   </section>
 
   <!-- ================= PLAYBOOK ================= -->
@@ -500,10 +532,6 @@
       <div class="pcard"><div class="pn">03</div><div class="pt">Results</div><div class="pd">Sell the vacation, not the flight. "I can get you clients." Never the details.</div></div>
       <div class="pcard"><div class="pn">04</div><div class="pt">Offer</div><div class="pd">The biggest variable. An irresistible offer multiplies even weak copy.</div></div>
     </div>
-
-    <div class="sec-h" style="margin-top:34px">Hard rules</div>
-    <div class="sec-sub">Stick to these or nothing works.</div>
-    <div class="toolwrap" id="rulesWrap"></div>
 
     <div class="sec-h" style="margin-top:34px">Outreach tools</div>
     <div class="sec-sub">Make high volume bearable. Channel → recommended tool.</div>
@@ -548,13 +576,19 @@
         <div><label class="f">Instagram link</label><input class="f" id="f-link" placeholder="instagram.com/..."></div>
       </div>
 
-      <label class="f">Phase in the chain</label>
-      <div class="stepper">
-        <div class="step" data-ph="intent" onclick="setPhase('intent')">Intent</div>
-        <div class="step" data-ph="engaged" onclick="setPhase('engaged')">Engaged</div>
-        <div class="step" data-ph="booked" onclick="setPhase('booked')">Booked</div>
-        <div class="step" data-ph="dead" onclick="setPhase('dead')">Dead / No</div>
+      <div class="grid2">
+        <div><label class="f">Funnel</label>
+          <select class="f" id="f-funnel" onchange="onModalFunnel()">
+            <option value="">Auto (round-robin)</option>
+            <option value="video">🎥 Video</option>
+            <option value="chat">💬 Chat</option>
+          </select>
+        </div>
+        <div><label class="f">Link naar het gesprek</label><input class="f" id="f-convo" placeholder="ig.me/m/... of DM-thread link"></div>
       </div>
+
+      <label class="f">Fase in de funnel</label>
+      <div class="stepper" id="phaseStepper"></div>
 
       <div class="grid2">
         <div>
@@ -562,9 +596,16 @@
           <input class="f" id="f-fups" type="number" min="0" value="0">
         </div>
         <div>
-          <label class="f">Next follow-up date</label>
+          <label class="f">Volgende follow-up datum</label>
           <input class="f" id="f-due" type="date">
         </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label class="f">Laatste berichtdatum</label>
+          <input class="f" id="f-lastmsg" type="date">
+        </div>
+        <div></div>
       </div>
 
       <div class="grid2">
@@ -729,11 +770,28 @@ Lisa, instagram.com/lisa, booked"></textarea>
 
 <script>
 const PHASES = {
-  intent:  {label:'Intent',  color:'var(--intent)',  maxFup:3, desc:'No reply yet · 3 follow-ups max'},
-  engaged: {label:'Engaged', color:'var(--engaged)', maxFup:8, desc:'Showed interest · up to 8 follow-ups'},
-  booked:  {label:'Booked',  color:'var(--booked)',  maxFup:8, desc:'Booking link sent · redirect to calendar'},
-  dead:    {label:'Dead / No',color:'var(--muted)',  maxFup:0, desc:'Closed out · revisit in 180 days'}
+  // ---- video funnel (VSL-aanpak) ----
+  intent:  {label:'Intent',  color:'var(--intent)',  maxFup:3, funnel:'video', desc:'No reply yet · 3 follow-ups max'},
+  engaged: {label:'Engaged', color:'var(--engaged)', maxFup:8, funnel:'video', desc:'Showed interest · up to 8 follow-ups'},
+  booked:  {label:'Booked',  color:'var(--booked)',  maxFup:8, funnel:'video', desc:'Booking link sent · redirect to calendar'},
+  dead:    {label:'Dead / No',color:'var(--muted)',  maxFup:0, funnel:'video', desc:'Closed out · revisit in 180 days'},
+  // ---- chat funnel (gesprek-aanpak, fase 1-5) ----
+  c_new:   {label:'1 · Nieuwe lead',     color:'var(--intent)',  maxFup:3,  funnel:'chat', desc:'Opening gestuurd · wacht op reactie'},
+  c_convo: {label:'2 · In gesprek',      color:'var(--engaged)', maxFup:8,  funnel:'chat', desc:'Actieve conversatie · stuur richting call'},
+  c_call:  {label:'3 · Call voorgesteld',color:'var(--signal)',  maxFup:8,  funnel:'chat', desc:'Call voorgesteld · chase tot er gepland is'},
+  c_booked:{label:'4 · Gepland/geboekt', color:'var(--booked)',  maxFup:0,  funnel:'chat', desc:'Call staat in de agenda'},
+  c_closed:{label:'5 · Afgesloten',      color:'var(--muted)',   maxFup:99, funnel:'chat', desc:'Geen boeking/interesse · follow-up 1× per kwartaal'}
 };
+const FUNNELS = { video:{label:'🎥 Video', name:'Video'}, chat:{label:'💬 Chat', name:'Chat'} };
+function leadFunnel(l){ return (l && (l.funnel==='chat'||l.funnel==='video')) ? l.funnel : 'video'; }
+function funnelPhases(fn){ return Object.keys(PHASES).filter(k=>PHASES[k].funnel===fn); }
+function funnelBadge(l){ const fn=leadFunnel(l); return `<span class="plat" title="Funnel">${FUNNELS[fn].label}</span>`; }
+/* round-robin over leads die expliciet aan de test zijn toegewezen (oude video-leads tellen niet mee) */
+function assignFunnel(){
+  const c={chat:0, video:0};
+  state.leads.forEach(l=>{ if(l.funnelAssigned) c[leadFunnel(l)]++; });
+  return c.chat<=c.video ? 'chat' : 'video';
+}
 
 // the tracking flags that drive the metrics (mirrors your Notion KPIs)
 const FLAGS = [
@@ -751,24 +809,10 @@ const KPIS = [
   {key:'ABR', name:'Appointment Booking Rate (ABR)', num:'booked', den:'approached', kpi:2}
 ];
 
-const RULES = [
-  ['Always be consistent','The #1 rule. Treat outreach like a sales call you can\'t skip.'],
-  ['POC before scale','Only scale what already books. No proof = no scaling.'],
-  ['Quantity AND quality','High volume of bad messages fails. You need both.'],
-  ['Don\'t copy-paste','Frameworks as guidance, never monkey-see-monkey-do.'],
-  ['Keep it vague','Curiosity is the cheat code. Don\'t reveal everything.'],
-  ['Mind the delay','Replies land 2–4 weeks later. Don\'t panic early.'],
-  ['3 answer types','Yes / No / F-off — all fine. Don\'t reply to the last one.'],
-  ['Enough data first','25 no-replies in a row is normal at 20% PRR. Don\'t change everything.']
-];
-
 const TOOLS = [
-  ['Personalized video','The initial stimulus — selfie/loom under 2.5 min','Loom'],
-  ['Booking link','One slot grabber in the booking message','Calendly'],
-  ['Account warm-up','Active profile + story posts so DMs land, not spam','Native IG'],
-  ['Inbound replies (later)','Auto-capture replies via IG Business API','Meta Graph API'],
-  ['Lead sourcing','Hashtag / follower / engagement lists → export CSV → Import here','Manual / scraper'],
-  ['This tracker','Funnel, follow-up cadence, KPIs','DM Pitch System']
+  {key:'video',   name:'Personalized video', desc:'The initial stimulus — selfie/loom under 2.5 min', tool:'Loom'},
+  {key:'booking', name:'Booking link',       desc:'One slot grabber in the booking message',          tool:'Calendly'},
+  {key:'warmup',  name:'Account warm-up',    desc:'Active profile + story posts so DMs land, not spam', tool:'Native IG'}
 ];
 
 let state = { leads:[], scripts:{nl:{},en:{}}, goal:30, lang:'nl' };
@@ -824,7 +868,8 @@ async function loadCloud(){
   if(!state.scripts.en) state.scripts.en={};
   state.abVariants = (sh.abVariants && sh.abVariants.length) ? sh.abVariants : ['A','B'];
   state.goal       = sh.goal || 30;
-  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal) };
+  state.toolLinks  = sh.toolLinks || {};
+  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks) };
   const ud = (userRes.data && userRes.data.data) || {};
   state.lang          = ud.lang || 'nl';
   state.accounts      = (ud.accounts && ud.accounts.length) ? ud.accounts : [ (me.email||'account').split('@')[0].replace(/\./g,'') ];
@@ -854,7 +899,7 @@ async function syncNow(){
     if(dels.length){ const {error} = await sb.from('leads').delete().in('id', dels); if(error) throw error; }
     lastSync = cur;
     // shared team state
-    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal};
+    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}};
     for(const k in sh){
       const j = JSON.stringify(sh[k]);
       if(sharedSnap[k] !== j){
@@ -1044,7 +1089,7 @@ function setRange(r){
   activeRange = r;
   document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active', b.dataset.range===r));
   document.getElementById('rangeCustom').classList.toggle('show', r==='custom');
-  renderMetrics(); renderInsight(); renderFunnel(); renderAB();
+  renderMetrics(); renderInsight(); renderFunnel(); renderTeam(); renderAB(); renderFT();
 }
 
 /* ---------- METRIC CARDS ---------- */
@@ -1124,6 +1169,22 @@ function renderTeam(){
   document.getElementById('teamStats').innerHTML = html;
 }
 
+/* ---------- DAGELIJKSE TRACKING (aantallen vandaag) ---------- */
+function renderDaily(){
+  const box = document.getElementById('dailyStrip'); if(!box) return;
+  const t = todayISO();
+  const vis = visibleLeads();
+  const cells = [
+    {n: vis.filter(l=> l.phase==='c_convo' || l.phase==='engaged').length, lbl:'Actieve gesprekken'},
+    {n: vis.filter(l=> l.approachDate===t).length, lbl:'DM’s verstuurd (nieuw)'},
+    {n: vis.filter(l=> l.lastInbound===t).length, lbl:'DM’s ontvangen (inbound)'},
+    {n: vis.filter(l=> l.lastFupDate===t).length, lbl:'Follow-ups'},
+    {n: vis.filter(l=> l.booksentDate===t).length, lbl:'Call voorgesteld'},
+    {n: vis.filter(l=> l.bookedDate===t).length, lbl:'Geboekte calls'}
+  ];
+  box.innerHTML = cells.map(c=>`<div class="dcell"><div class="dnum">${c.n}</div><div class="dlbl">${c.lbl}</div></div>`).join('');
+}
+
 /* ---------- BOTTLENECK INSIGHT ---------- */
 function renderInsight(){
   const box = document.getElementById('bottleneckInsight');
@@ -1179,12 +1240,20 @@ function renderFunnel(){
   document.getElementById('funnelFlow').innerHTML = html;
 }
 
-/* ---------- PIPELINE BOARD ---------- */
+/* ---------- PIPELINE BOARD (per funnel) ---------- */
+let activeFunnel = 'video';
+function setFunnelView(fn){
+  activeFunnel = fn;
+  document.querySelectorAll('#funnelToggle .range-btn').forEach(b=>b.classList.toggle('active', b.dataset.fn===fn));
+  renderBoard();
+}
 function renderBoard(){
   const board = document.getElementById('board');
   let html='';
-  const vis = visibleLeads();
-  ['intent','engaged','booked'].forEach(ph=>{
+  const vis = visibleLeads().filter(l=> leadFunnel(l)===activeFunnel);
+  const cols = funnelPhases(activeFunnel).filter(ph=> ph!=='dead');
+  board.classList.toggle('cols5', cols.length>3);
+  cols.forEach(ph=>{
     const ls = vis.filter(l=>l.phase===ph);
     html += `<div class="col" data-phase="${ph}" ondragover="allowDrop(event)" ondragenter="event.preventDefault();this.classList.add('dragover')" ondragleave="if(event.target===this)this.classList.remove('dragover')" ondrop="dropLead(event,'${ph}')">
       <div class="col-h">
@@ -1197,7 +1266,7 @@ function renderBoard(){
     html += `</div>`;
   });
   board.innerHTML = html;
-  document.getElementById('cntPipe').textContent = vis.filter(l=>l.phase!=='dead').length;
+  document.getElementById('cntPipe').textContent = visibleLeads().filter(l=>l.phase!=='dead' && l.phase!=='c_closed').length;
 }
 
 /* ---------- DRAG & DROP between pipeline columns ---------- */
@@ -1232,6 +1301,24 @@ function moveLeadPhase(id, phase){
   } else if(phase==='intent'){
     l.flags.approached = true;        // it's in the board, so it's been sent
     if(!l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due = d.toISOString().slice(0,10); }
+  } else if(phase==='c_new'){
+    l.flags.approached = true;
+    if(!l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due = d.toISOString().slice(0,10); }
+  } else if(phase==='c_convo'){
+    l.flags.approached = l.flags.positive = true;
+    l.fups = 0;
+    const d=new Date(); d.setDate(d.getDate()+1); l.due = d.toISOString().slice(0,10);
+  } else if(phase==='c_call'){
+    l.flags.approached = l.flags.positive = l.flags.booksent = true;
+    l.fups = 0;
+    const d=new Date(); d.setDate(d.getDate()+2); l.due = d.toISOString().slice(0,10);
+  } else if(phase==='c_booked'){
+    l.flags.approached = l.flags.positive = l.flags.booksent = l.flags.booked = true;
+    l.fups = 0; l.due = '';
+  } else if(phase==='c_closed'){
+    // afgesloten → langetermijn follow-up: 1× per kwartaal
+    l.fups = 0;
+    const d=new Date(); d.setDate(d.getDate()+90); l.due = d.toISOString().slice(0,10);
   }
   stampFlagDates(l);
   saveState(); renderAll();
@@ -1241,20 +1328,32 @@ function leadCardHTML(l){
   const step = nextStep(l);
   return `<div class="lead" draggable="true" ondragstart="dragLead(event,'${l.id}')" ondragend="dragEnd(event)" onclick="openLead('${l.id}')">
     <div class="ln">${esc(l.name||'(no name)')} ${due}</div>
-    <div class="lm"><span class="plat">${l.platform}</span>
+    <div class="lm">${funnelBadge(l)}
       ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
+      ${staleBadge(l)}
+      ${convoLinkHTML(l)}
       ${(l.flags&&l.flags.approached)?`<span class="fupbadge">FUP ${l.fups||0}/${PHASES[l.phase].maxFup}</span>`:`<span class="due today">to send</span>`}</div>
     <div class="card-step">→ ${step.tag}</div>
     ${quickFlagsHTML(l)}
   </div>`;
 }
 function dueBadge(l){
-  if(!l.due || l.phase==='dead' || l.phase==='booked') return '';
+  if(!l.due || l.phase==='dead' || l.phase==='booked' || l.phase==='c_booked') return '';
   const today = todayISO();
   let cls='later', txt=l.due.slice(5);
   if(l.due<=today){cls='today';txt='due';}
   else{ const diff=(new Date(l.due)-new Date(today))/86400000; if(diff<=2)cls='soon'; }
   return `<span class="due ${cls}">${txt}</span>`;
+}
+/* ⚠ alert: 2+ dagen geen bericht in een actieve fase → tijd voor follow-up */
+function staleBadge(l){
+  if(!l.lastMsgDate) return '';
+  if(['dead','booked','c_booked','c_closed'].includes(l.phase)) return '';
+  const d = Math.round((new Date(todayISO()) - new Date(l.lastMsgDate))/86400000);
+  return d>=2 ? `<span class="stale" title="Laatste bericht: ${l.lastMsgDate}">⚠ ${d}d stil</span>` : '';
+}
+function convoLinkHTML(l){
+  return l.convoLink ? `<a class="link" href="${esc(l.convoLink)}" target="_blank" rel="noopener">gesprek ↗</a>` : '';
 }
 
 /* ---------- INITIAL OUTREACH (first DM not sent yet) ---------- */
@@ -1294,7 +1393,7 @@ function sendRowHTML(l){
       <div style="flex:1;min-width:0">
         <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(no name)')}
           ${vb}<span class="due today">initial not sent</span>${langSet?'':'<span class="due later" title="No language set on this lead — using toolbar default">lang?</span>'}</div>
-        <div class="lm"><span class="plat">${l.platform}</span>
+        <div class="lm">${l.funnel?funnelBadge(l):'<span class="plat" title="Funnel wordt round-robin toegewezen bij versturen">🎲 funnel: auto</span>'}
           ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
           ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profile ↗</a>`:''}</div>
       </div>
@@ -1328,12 +1427,24 @@ function setLeadLang(id, lang){
 function markInitialSent(id){
   const l = state.leads.find(x=>x.id===id); if(!l) return;
   if(!l.variant) l.variant = assignVariant();
+  if(!l.funnel){ l.funnel = assignFunnel(); l.funnelAssigned = true; }
   l.account = leadAccount(l);              // stamp which account sent the initial
   l.flags = Object.assign({}, l.flags, {approached:true});
   l.approachDate = todayISO();
-  l.phase = 'intent'; l.fups = 0;
+  l.lastMsgDate = todayISO();              // outbound bericht = laatste berichtdatum
+  l.phase = leadFunnel(l)==='chat' ? 'c_new' : 'intent';
+  l.fups = 0;
   const d = new Date(); d.setDate(d.getDate()+intentGap(0)); l.due = d.toISOString().slice(0,10);
   stampFlagDates(l);
+  saveState(); renderAll();
+}
+/* 📥 inbound: lead reageerde — stamp datum, c_new schuift door naar In gesprek */
+function markInbound(id){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  l.lastMsgDate = todayISO();
+  l.lastInbound = todayISO();
+  if(l.phase==='c_new'){ moveLeadPhase(id,'c_convo'); return; }
+  if(l.phase==='intent'){ moveLeadPhase(id,'engaged'); return; }
   saveState(); renderAll();
 }
 /* delete EVERY lead you haven't sent an initial message to (current account scope) */
@@ -1368,6 +1479,17 @@ function toggleLeadFlag(id, flag){
   saveState(); renderAll();
 }
 function quickFlagsHTML(l){
+  if(leadFunnel(l)==='chat'){
+    // chat: fase-knoppen ipv video-flags
+    const pbtn=(ph,label,cls)=>`<button class="qflag ${l.phase===ph?'on '+(cls||''):''}" onclick="event.stopPropagation();moveLeadPhase('${l.id}','${ph}')">${l.phase===ph?'✓ ':''}${label}</button>`;
+    return `<div class="qflags">
+      <button class="qflag" onclick="event.stopPropagation();markInbound('${l.id}')" title="Lead reageerde — stamp laatste berichtdatum">📥 Reactie ontvangen</button>
+      ${pbtn('c_convo','💬 In gesprek','pos')}
+      ${pbtn('c_call','📞 Call voorgesteld')}
+      ${pbtn('c_booked','✅ Geboekt','bk')}
+      ${pbtn('c_closed','🔁 Afgesloten','neg')}
+    </div>`;
+  }
   const f = l.flags||{};
   const chip=(flag,label,extra)=>`<button class="qflag ${f[flag]?'on '+(extra||''):''}" onclick="event.stopPropagation();toggleLeadFlag('${l.id}','${flag}')">${f[flag]?'✓ ':''}${label}</button>`;
   return `<div class="qflags">
@@ -1416,6 +1538,28 @@ function nextStep(l){
     if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'All roads → booking link', script:S['bfup'+f]||'(add B-FUP '+f+' in Scripts)', gif:g('bfup'+f), num:f, max:8};
     return {tag:'Booking — limit reached', detail:'', script:'', gif:'', num:f, max:8};
   }
+  // ---- chat funnel ----
+  if(l.phase==='c_new'){
+    if(!(l.flags && l.flags.approached)){
+      const iv=initialScript(l.variant, leadLang(l));
+      return {tag:'Opening — nog niet gestuurd', detail:'Stuur de eerste DM', script:iv.text, gif:iv.gif, num:0, max:3, initial:true};
+    }
+    if(f<3) return {tag:`Opening FUP ${f+1} / 3`, detail:'Nog geen reactie · 3 max', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:3};
+    return {tag:'Opening — limiet bereikt', detail:'3 follow-ups gedaan. Sluit af of laat staan.', script:'', gif:'', num:f, max:3};
+  }
+  if(l.phase==='c_convo'){
+    return {tag:'In gesprek — chat actief', detail:'Reageer persoonlijk · stuur richting een call', script:'', gif:'', num:f, max:8};
+  }
+  if(l.phase==='c_call'){
+    if(f<=8) return {tag:`Call chase ${Math.max(1,f)} / 8`, detail:'Call voorgesteld · krijg \'m in de agenda', script:S['bfup'+Math.max(1,f)]||'', gif:g('bfup'+Math.max(1,f)), num:f, max:8};
+    return {tag:'Call chase — limiet bereikt', detail:'', script:'', gif:'', num:f, max:8};
+  }
+  if(l.phase==='c_booked'){
+    return {tag:'Geboekt ✓', detail:'Call staat — geen actie nodig', script:'', gif:'', num:f, max:0};
+  }
+  if(l.phase==='c_closed'){
+    return {tag:'Kwartaal check-in', detail:'Afgesloten · 1× per kwartaal opnieuw aanhaken', script:S.quarterly||'', gif:g('quarterly'), num:f, max:99};
+  }
   return {tag:'—', detail:'', script:'', gif:'', num:0, max:0};
 }
 
@@ -1423,7 +1567,7 @@ function renderDue(){
   const wrap = document.getElementById('dueList');
   const today = todayISO();
   const due = visibleLeads()
-    .filter(l=>l.due && l.phase!=='dead' && l.phase!=='booked' && l.flags && l.flags.approached)
+    .filter(l=>l.due && !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached)
     .sort((a,b)=> (a.due||'')<(b.due||'')?-1:1);
 
   // buckets
@@ -1493,14 +1637,16 @@ function dueRowHTML(l){
         <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(no name)')}
           <span class="due ${whenCls}">${when}</span>
           <span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></div>
-        <div class="lm"><span class="plat">${l.platform}</span>
+        <div class="lm">${funnelBadge(l)}
           ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
+          ${staleBadge(l)}
           ${l.variant?`<span class="vbadge ${l.variant}">Var ${l.variant}</span>`:''}
           <span class="plat">${leadLang(l)==='en'?'EN':'NL'}</span>
           <span class="plat" style="border-color:var(--signal);color:var(--signal)" title="Send this follow-up from the same account as before">📤 from @${esc(leadAccount(l))}</span>
           <span class="fupbadge">FUP ${l.fups||0}/${max}</span>
           ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profile ↗</a>`:''}
-          ${l.notes?`<span style="color:var(--muted);font-size:10px">· ${esc(l.notes).slice(0,40)}</span>`:''}</div>
+          ${convoLinkHTML(l)}
+          ${l.notes?`<span style="color:var(--muted);font-size:10px">· ${esc(l.notes).slice(0,60)}</span>`:''}</div>
       </div>
       <div style="display:flex;gap:7px;flex:none;flex-wrap:wrap;justify-content:flex-end;align-items:center">
         ${accountSelectHTML(l)}
@@ -1566,8 +1712,10 @@ function logFollowup(id){
   if((l.fups||0)>=max) return;
   l.account = leadAccount(l);              // stamp which account sent this follow-up
   l.fups = (l.fups||0)+1;
-  // intent follows INTENT_GAPS (1/3/5d), engaged/booked stay at 2d
-  const spacingDays = l.phase==='intent' ? intentGap(l.fups) : 2;
+  l.lastMsgDate = todayISO();              // outbound follow-up = laatste bericht
+  l.lastFupDate = todayISO();
+  // intent/c_new follow INTENT_GAPS (1/3/5d), c_closed = kwartaal (90d), rest 2d
+  const spacingDays = (l.phase==='intent'||l.phase==='c_new') ? intentGap(l.fups) : (l.phase==='c_closed' ? 90 : 2);
   const d = new Date(); d.setDate(d.getDate()+spacingDays);
   l.due = d.toISOString().slice(0,10);
   if(l.fups>=max) l.due = ''; // exhausted, clear queue
@@ -1608,6 +1756,9 @@ function openLead(id){
   document.getElementById('f-link').value = l?.link||'';
   document.getElementById('f-fups').value = l?.fups||0;
   document.getElementById('f-due').value = l?.due||'';
+  document.getElementById('f-convo').value = l?.convoLink||'';
+  document.getElementById('f-lastmsg').value = l?.lastMsgDate||'';
+  document.getElementById('f-funnel').value = l ? leadFunnel(l) : '';
   document.getElementById('f-lang').value = (l?.lang==='nl'||l?.lang==='en') ? l.lang : '';
   document.getElementById('f-variant').value = l?.variant||'';
   document.getElementById('f-account').innerHTML = accounts().map(a=>`<option value="${esc(a)}">@${esc(a)}</option>`).join('');
@@ -1616,19 +1767,34 @@ function openLead(id){
   document.getElementById('f-notes').value = l?.notes||'';
   modalPhase = l?.phase||'intent';
   modalFlags = Object.assign({approached:true}, l?.flags||{});
+  renderStepper();
   setPhase(modalPhase, true);
   renderFlags();
   document.getElementById('scrim').classList.add('show');
 }
 function closeLead(){ document.getElementById('scrim').classList.remove('show'); editingId=null; }
+/* effective funnel chosen in the modal ('' = auto → video stepper as preview) */
+function modalFunnel(){ return document.getElementById('f-funnel').value || (PHASES[modalPhase] ? PHASES[modalPhase].funnel : 'video'); }
+function renderStepper(){
+  const fn = modalFunnel();
+  document.getElementById('phaseStepper').innerHTML = funnelPhases(fn).map(k=>
+    `<div class="step ${modalPhase===k?'on':''}" data-ph="${k}" onclick="setPhase('${k}')">${PHASES[k].label}</div>`).join('');
+}
+function onModalFunnel(){
+  const fn = document.getElementById('f-funnel').value || 'video';
+  if(!PHASES[modalPhase] || PHASES[modalPhase].funnel!==fn) modalPhase = funnelPhases(fn)[0];
+  renderStepper();
+  setPhase(modalPhase, true);
+}
 function setPhase(ph, silent){
   modalPhase = ph;
-  document.querySelectorAll('.step').forEach(s=>s.classList.toggle('on', s.dataset.ph===ph));
+  document.querySelectorAll('#phaseStepper .step').forEach(s=>s.classList.toggle('on', s.dataset.ph===ph));
   document.getElementById('lblFups').textContent = `Follow-ups sent (max ${PHASES[ph].maxFup})`;
   // sensible flag defaults when promoting phase
   if(!silent){
-    if(ph==='engaged'){ modalFlags.seen=true; modalFlags.positive=true; }
-    if(ph==='booked'){ modalFlags.seen=true; modalFlags.positive=true; modalFlags.booksent=true; modalFlags.booked=true; }
+    if(ph==='engaged'||ph==='c_convo'){ modalFlags.seen = ph==='engaged'?true:modalFlags.seen; modalFlags.positive=true; }
+    if(ph==='c_call'){ modalFlags.positive=true; modalFlags.booksent=true; }
+    if(ph==='booked'||ph==='c_booked'){ if(ph==='booked') modalFlags.seen=true; modalFlags.positive=true; modalFlags.booksent=true; modalFlags.booked=true; }
     renderFlags();
   }
 }
@@ -1658,14 +1824,21 @@ function saveLead(){
   const chosenLang = document.getElementById('f-lang').value;        // '' | nl | en
   const chosenVar  = document.getElementById('f-variant').value;     // '' | A | B | C
   const chosenAcct = document.getElementById('f-account').value;     // sending account
+  const chosenFun  = document.getElementById('f-funnel').value;      // '' | video | chat
   if(chosenLang) lead.lang = chosenLang; else delete lead.lang;
   if(chosenAcct) lead.account = chosenAcct;
+  lead.convoLink = document.getElementById('f-convo').value.trim();
+  lead.lastMsgDate = document.getElementById('f-lastmsg').value;
   deriveIg(lead);
   if(modalPhase==='dead') lead.due='';
   if(editingId){
     const i = state.leads.findIndex(x=>x.id===editingId);
     const prev = state.leads[i];
     lead._setter = prev._setter || targetSetter();
+    lead.funnel = chosenFun || prev.funnel;
+    if(prev.funnelAssigned) lead.funnelAssigned = true;
+    if(!lead.funnel) delete lead.funnel;
+    lead.lastInbound = prev.lastInbound; lead.lastFupDate = prev.lastFupDate;
     lead.approachDate = prev.approachDate || todayISO();
     ['seenDate','positiveDate','booksentDate','bookedDate'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
     lead.variant = chosenVar || prev.variant || assignVariant();
@@ -1673,6 +1846,10 @@ function saveLead(){
     state.leads[i]=lead;
   }else{
     lead._setter = targetSetter();
+    if(chosenFun){ lead.funnel = chosenFun; }
+    else { lead.funnel = assignFunnel(); lead.funnelAssigned = true; }
+    // fase moet bij de funnel horen
+    if(PHASES[lead.phase] && PHASES[lead.phase].funnel!==leadFunnel(lead)) lead.phase = funnelPhases(leadFunnel(lead))[0];
     lead.approachDate = todayISO();
     lead.variant = chosenVar || assignVariant();
     stampFlagDates(lead);
@@ -1737,6 +1914,10 @@ function buildScriptBlocks(){
   const bDef={1:["Hier de link nog een keer: [booking link]","Here's the link again: [booking link]"],2:["Zullen we een moment inplannen?","Still want to lock in a time?"]};
   for(let i=1;i<=8;i++){ const d=bDef[i]||["",""]; h+=blockHTML('B-FUP '+i,'bfup'+i,d[0],d[1],true); }
   document.getElementById('bookedFups').innerHTML=h;
+  // CHAT FUNNEL
+  document.getElementById('chatFups').innerHTML = blockHTML('Kwartaal check-in · afgesloten leads','quarterly',
+    "Hey {{first.name}}, lang geleden! Hoe gaat het er nu mee? Ben benieuwd waar je nu staat.",
+    "Hey {{first.name}}, been a while! How are things going? Curious where you're at now.",true);
 }
 function flashSaved(key){
   if(key!=='initial') return;
@@ -1796,10 +1977,27 @@ function setLang(l){
 
 /* ---------- PLAYBOOK static ---------- */
 function renderPlaybook(){
-  document.getElementById('rulesWrap').innerHTML = RULES.map(r=>
-    `<div class="tool"><div><div class="tn">${r[0]}</div><div class="td">${r[1]}</div></div></div>`).join('');
-  document.getElementById('toolsWrap').innerHTML = TOOLS.map(t=>
-    `<div class="tool"><div><div class="tn">${t[0]}</div><div class="td">${t[1]}</div></div><div class="tu">${t[2]}</div></div>`).join('');
+  const links = state.toolLinks || {};
+  document.getElementById('toolsWrap').innerHTML = TOOLS.map(t=>{
+    const url = links[t.key]||'';
+    return `<div class="tool" style="flex-wrap:wrap">
+      <div style="flex:1;min-width:180px"><div class="tn">${t.name}</div><div class="td">${t.desc}</div></div>
+      <div class="tu">${t.tool}</div>
+      <div style="display:flex;gap:7px;align-items:center;width:100%">
+        <input class="gifinput" style="flex:1" data-toollink="${t.key}" placeholder="Plak hier je ${t.tool}-link…" value="${esc(url)}">
+        ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
+        ${url?`<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">Copy</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-toollink]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      state.toolLinks = state.toolLinks||{};
+      state.toolLinks[inp.dataset.toollink] = inp.value.trim();
+      saveState();
+    });
+    inp.addEventListener('change',()=> renderPlaybook());   // re-render (open/copy knop) na blur
+  });
 }
 
 /* ---------- GOAL ---------- */
@@ -2201,6 +2399,54 @@ function renderAB(){
   box.innerHTML = verdict + cards + note;
 }
 
+/* ---------- FUNNEL TEST (💬 chat vs 🎥 video) ---------- */
+const FT_MINSAMPLE = 20;
+function countF(flag, fn){
+  return visibleLeads().filter(l=> leadFunnel(l)===fn && l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+}
+function renderFT(){
+  const box = document.getElementById('ftBody'); if(!box) return;
+  const stat = ['chat','video'].map(fn=>{
+    const appr=countF('approached',fn), pos=countF('positive',fn), bs=countF('booksent',fn), bk=countF('booked',fn);
+    return {fn, appr, pos, bs, bk,
+      reply: appr?pos/appr:0, prop: appr?bs/appr:0, book: appr?bk/appr:0};
+  });
+  const [chat, video] = stat;
+  const eligible = stat.filter(s=>s.appr>=FT_MINSAMPLE);
+
+  let verdict='';
+  const total = chat.appr+video.appr;
+  if(eligible.length<2){
+    verdict = `<div class="abverdict">Data verzamelen — <b>${total}</b> leads benaderd (${chat.appr} chat · ${video.appr} video) in dit tijdvenster. Minimaal ${FT_MINSAMPLE} per funnel nodig voor een oordeel. Round-robin loopt — niks aanpassen, volume draaien.</div>`;
+  } else {
+    const lead = chat.book>video.book?chat:video, rest = lead===chat?video:chat;
+    const conf = propConfidence(lead.bk,lead.appr,rest.bk,rest.appr)*100;
+    const replyLead = chat.reply>video.reply?chat:video;
+    if(conf>=95)
+      verdict = `<div class="abverdict">✓ <b>${FUNNELS[lead.fn].label} funnel wint</b> op boekrate: ${fmtPct(lead.book)} vs ${fmtPct(rest.book)} (~${conf.toFixed(0)}% zekerheid). Reply rate leider: ${FUNNELS[replyLead.fn].label} (${fmtPct(replyLead.reply)}). <b>Schaal de winnaar.</b></div>`;
+    else
+      verdict = `<div class="abverdict"><b>${FUNNELS[lead.fn].label} leidt</b> op boekrate (${fmtPct(lead.book)} vs ${fmtPct(rest.book)}) maar pas ~${conf.toFixed(0)}% zekerheid — nog niet beslissend. Reply rate: chat ${fmtPct(chat.reply)} · video ${fmtPct(video.reply)}. Doorsturen.</div>`;
+  }
+
+  let cards = '<div class="abgrid">';
+  stat.forEach(s=>{
+    const isLead = eligible.length===2 && s.book===Math.max(chat.book,video.book) && chat.book!==video.book;
+    const need = s.appr<FT_MINSAMPLE ? `${FT_MINSAMPLE-s.appr} meer nodig` : 'genoeg data';
+    const lbl = s.fn==='chat' ? ['Reply (→ in gesprek)','Call voorgesteld','Geboekt'] : ['Positive reply','Booking voorgesteld','Geboekt'];
+    cards += `<div class="abcard ${isLead?'win':''}">
+      <h4>${FUNNELS[s.fn].label} funnel</h4>
+      <div class="abn">${s.appr} benaderd · ${need}</div>
+      <div class="abstat"><span class="k">${lbl[0]}</span><span class="v primary">${s.appr?fmtPct(s.reply):'—'}</span></div>
+      <div class="abstat"><span class="k">${lbl[1]}</span><span class="v">${s.appr?fmtPct(s.prop):'—'}</span></div>
+      <div class="abstat"><span class="k">${lbl[2]} · eindscore</span><span class="v">${s.appr?fmtPct(s.book):'—'}</span></div>
+      <div class="abstat"><span class="k">Geboekt / benaderd</span><span class="v" style="font-size:11px">${s.bk} / ${s.appr}</span></div>
+    </div>`;
+  });
+  cards += '</div>';
+  const note = `<div class="abctrl" style="margin-top:14px">Venster: <b style="color:var(--ink)">${rangeLabel()}</b> (Dashboard) · winnaar beoordeeld op boekrate = geboekt ÷ benaderd · ≥${FT_MINSAMPLE}/funnel nodig.</div>`;
+  box.innerHTML = verdict + cards + note;
+}
+
 /* turn A/B test on/off / set number of variants in rotation */
 function setAbVariants(n){
   const all=['A','B','C'];
@@ -2212,7 +2458,7 @@ function setAbVariants(n){
 }
 
 /* ---------- render all ---------- */
-function renderAll(){ renderAccountSwitcher(); renderMetrics(); renderInsight(); renderFunnel(); renderTeam(); renderSend(); renderBoard(); renderDue(); renderTable(); renderAB(); }
+function renderAll(){ renderAccountSwitcher(); renderMetrics(); renderDaily(); renderInsight(); renderFunnel(); renderTeam(); renderSend(); renderBoard(); renderDue(); renderTable(); renderAB(); renderFT(); renderPlaybook(); }
 
 /* ---------- tabs ---------- */
 function switchView(v){
