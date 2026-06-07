@@ -763,9 +763,9 @@ const KPIS = [
 ];
 
 const TOOLS = [
-  {key:'video',   name:'Personalized video', desc:'The initial stimulus — selfie/loom under 2.5 min', tool:'Loom'},
-  {key:'booking', name:'Booking link',       desc:'One slot grabber in the booking message',          tool:'Calendly'},
-  {key:'warmup',  name:'Account warm-up',    desc:'Active profile + story posts so DMs land, not spam', tool:'Native IG'}
+  {key:'video',      name:'Persoonlijke video', desc:'De eerste stimulus — selfie/loom onder 2,5 min', tool:'Loom'},
+  {key:'booking_nl', name:'Bookinglink 🇳🇱 NL',  desc:'Agendalink voor Nederlandse leads',              tool:'Calendly'},
+  {key:'booking_en', name:'Bookinglink 🇬🇧 EN',  desc:'Agendalink voor Engelse leads',                  tool:'Calendly'}
 ];
 
 let state = { leads:[], scripts:{nl:{},en:{}}, goal:30, lang:'nl' };
@@ -1913,6 +1913,7 @@ function setLang(l){
 /* ---------- PLAYBOOK static ---------- */
 function renderPlaybook(){
   const links = state.toolLinks || {};
+  if(links.booking && !links.booking_nl){ links.booking_nl = links.booking; delete links.booking; state.toolLinks = links; saveState(); }
   document.getElementById('toolsWrap').innerHTML = TOOLS.map(t=>{
     const url = links[t.key]||'';
     return `<div class="tool" style="flex-wrap:wrap">
