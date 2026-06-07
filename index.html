@@ -481,7 +481,8 @@
     <div id="initialBlock" class="scard" style="margin-bottom:16px"></div>
 
     <div class="sec-h">De follow-up keten</div>
-    <div class="sec-sub">Elke follow-up is een eigen blok — precies één bericht per stuk. Voeg optioneel een GIF-URL toe; die verschijnt in de follow-up lijst.</div>
+    <div class="sec-sub">Elke follow-up is een eigen blok — precies één bericht per stuk.</div>
+    <div class="mignote">📅 <b>Cadans:</b> follow-ups gaan altijd om de dag, exclusief weekend — ma → wo → vr → di. Het systeem plant de volgende datum automatisch.</div>
     <div class="chain">
       <div class="scard">
         <h4><span class="phase-dot" style="background:var(--intent)"></span> Intent · I-FUP</h4>
@@ -505,8 +506,8 @@
       </div>
     </div>
 
-    <div class="sec-h" style="margin-top:34px">Tools &amp; links</div>
-    <div class="sec-sub">Je vaste links (Loom, Calendly...) — gedeeld met het hele team, altijd binnen handbereik.</div>
+    <div class="sec-h" style="margin-top:34px">Setter Hub — video's &amp; links</div>
+    <div class="sec-sub">Alle vaste assets op één plek, gedeeld met het hele team. De juiste link verschijnt automatisch als kopieerknop bij de stap in de werklijst waar hij hoort.</div>
     <div class="toolwrap" id="toolsWrap"></div>
   </section>
 
@@ -763,9 +764,14 @@ const KPIS = [
 ];
 
 const TOOLS = [
-  {key:'video',      name:'VSL',                desc:'De video voor de VSL-funnel — houd \'m onder 2,5 min', tool:'Loom'},
-  {key:'booking_nl', name:'Bookinglink 🇳🇱 NL',  desc:'Agendalink voor Nederlandse leads',              tool:'iClosed'},
-  {key:'booking_en', name:'Bookinglink 🇬🇧 EN',  desc:'Agendalink voor Engelse leads',                  tool:'iClosed'}
+  {key:'th_allround',   name:'Trojan Horse video — All-round',    desc:'Voor opgenomen toestemmingsvideo (algemene versie)', tool:'Video'},
+  {key:'th_leadmagnet', name:'Trojan Horse video — Lead Magnet',  desc:'Versie voor lead-magnet leads', tool:'Video'},
+  {key:'th_follower',   name:'Trojan Horse video — New Follower', desc:'Versie voor nieuwe volgers', tool:'Video'},
+  {key:'video',         name:'Evergreen VSL',                     desc:'De evergreen video sales letter — houd \'m onder 2,5 min', tool:'Loom'},
+  {key:'vn_vsl',        name:'Voice-note bij Evergreen VSL',      desc:'Pro-tip: stuur dit echt als spraakmemo — voelt persoonlijker en converteert beter', tool:'Audio'},
+  {key:'booking_nl',    name:'Calendar link 🇳🇱 NL',               desc:'Agendalink voor Nederlandse leads', tool:'iClosed'},
+  {key:'booking_en',    name:'Calendar link 🇬🇧 EN',               desc:'Agendalink voor Engelse leads', tool:'iClosed'},
+  {key:'vn_booking',    name:'Voice-note bij calendar link',      desc:'Pro-tip: stuur dit echt als spraakmemo — voelt persoonlijker en converteert beter', tool:'Audio'}
 ];
 
 let state = { leads:[], scripts:{nl:{},en:{}}, goal:30, lang:'nl' };
@@ -1434,6 +1440,7 @@ function sendRowHTML(l){
           ? `<div class="step-script"><span class="qscript-text">${txt}</span>
                <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${txt.replace(/"/g,'&quot;')}">Kopieer</button></div>`
           : `<div class="step-script empty-script">Nog geen openingsscript — voeg toe in de Scripts-tab.</div>` }
+      ${assetBtnsHTML(l, {initial:true})}
     </div>
   </div>`;
 }
@@ -1554,8 +1561,8 @@ function nextStep(l){
     return {tag:'Limiet bereikt', detail:'8 follow-ups gedaan.', script:'', gif:'', num:f, max:8};
   }
   if(l.phase==='booked'){
-    if(f===0) return {tag:'Stuur het bookingbericht', detail:'Drop de agendalink', script:S.booking||'', gif:g('booking'), num:0, max:8};
-    if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'Alles wijst naar de bookinglink', script:S['bfup'+f]||'(voeg B-FUP '+f+' toe in Scripts)', gif:g('bfup'+f), num:f, max:8};
+    if(f===0) return {tag:'Stuur het bookingbericht', detail:'Drop de agendalink', script:S.booking||'', gif:g('booking'), num:0, max:8, booking:true};
+    if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'Alles wijst naar de bookinglink', script:S['bfup'+f]||'(voeg B-FUP '+f+' toe in Scripts)', gif:g('bfup'+f), num:f, max:8, booking:true};
     return {tag:'Booking — limiet bereikt', detail:'', script:'', gif:'', num:f, max:8};
   }
   // ---- chat funnel ----
@@ -1571,7 +1578,7 @@ function nextStep(l){
     return {tag:'In gesprek — chat actief', detail:'Reageer persoonlijk · stuur richting een call', script:'', gif:'', num:f, max:8};
   }
   if(l.phase==='c_call'){
-    if(f<=8) return {tag:`Call chase ${Math.max(1,f)} / 8`, detail:'Call voorgesteld · krijg \'m in de agenda', script:S['bfup'+Math.max(1,f)]||'', gif:g('bfup'+Math.max(1,f)), num:f, max:8};
+    if(f<=8) return {tag:`Call chase ${Math.max(1,f)} / 8`, detail:'Call voorgesteld · krijg \'m in de agenda', script:S['bfup'+Math.max(1,f)]||'', gif:g('bfup'+Math.max(1,f)), num:f, max:8, booking:true};
     return {tag:'Call chase — limiet bereikt', detail:'', script:'', gif:'', num:f, max:8};
   }
   if(l.phase==='c_booked'){
@@ -1627,8 +1634,27 @@ function dueRowHTML(l){
           ? `<div class="step-script"><span class="qscript-text">${scriptText}</span>
                <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${scriptText.replace(/"/g,'&quot;')}">Kopieer</button></div>`
           : `<div class="step-script empty-script">Geen script voor deze stap — voeg toe in de Scripts-tab.</div>` }
+      ${assetBtnsHTML(l, step)}
     </div>
   </div>`;
+}
+
+/* de juiste hub-links als kopieerknop bij de stap waar ze horen */
+function assetBtnsHTML(l, step){
+  const links = state.toolLinks||{};
+  const btn=(label,url)=> url ? `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">${label}</button>` : '';
+  let h='';
+  if(step.initial){
+    h += btn('🎥 TH all-round',links.th_allround) + btn('🎥 TH lead-magnet',links.th_leadmagnet) + btn('🎥 TH new follower',links.th_follower);
+  }
+  if(step.vsl){
+    h += btn('🎬 Kopieer VSL-link',links.video) + btn('🎙 Voice-note VSL',links.vn_vsl);
+  }
+  if(step.booking){
+    const bl = leadLang(l)==='en' ? links.booking_en : links.booking_nl;
+    h += btn(leadLang(l)==='en'?'📅 Calendar link EN':'📅 Calendar link NL', bl) + btn('🎙 Voice-note calendar',links.vn_booking);
+  }
+  return h ? `<div class="qflags" style="margin-top:8px">${h}</div>` : '';
 }
 
 function copyScript(btn){
