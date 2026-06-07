@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DM Pitch System — Outreach Engine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --ink:#0d0f12;
+    --paper:#f4f1ea;
+    --paper-2:#ebe6db;
+    --card:#fbfaf6;
+    --line:#d8d2c4;
+    --line-2:#c4bda c;
+    --signal:#ff4d1c;     /* outbound orange — the "stimuli" accent */
+    --signal-dim:#ffe3d8;
+    --go:#1f7a4d;         /* on/above KPI */
+    --go-bg:#e3f1e8;
+    --warn:#b8860b;
+    --bad:#c0392b;
+    --bad-bg:#f6e2df;
+    --muted:#7c7768;
+    --intent:#5b6cff;
+    --engaged:#9b51e0;
+    --booked:#1f7a4d;
+    --shadow:0 1px 0 rgba(0,0,0,.04), 0 8px 24px rgba(20,18,12,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  body{background-image:radial-gradient(var(--line) .5px, transparent .5px);background-size:22px 22px}
+
+  /* ---- layout ---- */
+  .wrap{max-width:1280px;margin:0 auto;padding:0 22px 120px}
+  header.top{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:34px 0 22px;border-bottom:2px solid var(--ink);margin-bottom:26px;gap:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:16px}
+  .plane{width:46px;height:46px;border:2px solid var(--ink);border-radius:12px;display:grid;place-items:center;background:var(--ink);flex:none}
+  .plane svg{width:24px;height:24px;fill:var(--paper);transform:rotate(-8deg)}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:30px;letter-spacing:-.5px;line-height:1}
+  .sub{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+  .topright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    border:1.5px solid var(--ink);border-radius:30px;padding:8px 14px;background:var(--card);display:flex;align-items:center;gap:8px}
+  .pill b{font-weight:700}
+  .dotlive{width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 0 var(--signal);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,28,.5)}70%{box-shadow:0 0 0 7px rgba(255,77,28,0)}100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}}
+
+  /* ---- tabs ---- */
+  nav.tabs{display:flex;gap:4px;margin-bottom:26px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:0}
+  .tab{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+    padding:11px 16px;border:none;background:none;cursor:pointer;color:var(--muted);position:relative;font-weight:700;border-radius:6px 6px 0 0}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink)}
+  .tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--signal)}
+  .tab .count{display:inline-block;background:var(--ink);color:var(--paper);border-radius:20px;font-size:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+  .tab.active .count{background:var(--signal)}
+
+  .view{display:none;animation:fade .35s ease}
+  .view.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---- metric cards ---- */
+  .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:960px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.metrics{grid-template-columns:1fr}}
+  .mcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .mcard .label{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-height:30px;line-height:1.3}
+  .mcard .val{font-family:'Fraunces',serif;font-size:42px;font-weight:600;line-height:1;margin:8px 0 4px;letter-spacing:-1px}
+  .mcard .kpi{font-family:'Space Mono',monospace;font-size:11px;display:flex;align-items:center;gap:7px}
+  .mcard .kpi .tag{padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.04em}
+  .tag.ok{background:var(--go-bg);color:var(--go)}
+  .tag.under{background:var(--bad-bg);color:var(--bad)}
+  .tag.neutral{background:var(--paper-2);color:var(--muted)}
+  .mcard .denom{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px}
+  .mcard .spark{position:absolute;right:-2px;bottom:-2px;width:60px;height:60px;opacity:.07}
+  .mcard.alert{border-color:var(--signal)}
+  .mcard.alert::before{content:"BOTTLENECK";position:absolute;top:0;right:0;background:var(--signal);color:#fff;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.1em;padding:3px 8px;border-radius:0 12px 0 10px}
+
+  /* ---- section title ---- */
+  .sec-h{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin:30px 0 4px;display:flex;align-items:center;gap:10px}
+  .sec-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;letter-spacing:.03em}
+
+  /* ---- buttons ---- */
+  button.btn{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
+    border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:9px;cursor:pointer;transition:transform .08s,background .15s}
+  button.btn:hover{transform:translateY(-1px)}
+  button.btn:active{transform:translateY(0)}
+  button.btn.ghost{background:transparent;color:var(--ink)}
+  button.btn.ghost:hover{background:var(--ink);color:var(--paper)}
+  button.btn.sig{background:var(--signal);border-color:var(--signal)}
+  button.btn.sm{padding:7px 12px;font-size:11px}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+  /* ---- pipeline board ---- */
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}
+  @media(max-width:900px){.board{grid-template-columns:1fr}}
+  .col{background:var(--paper-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;min-height:200px}
+  .col-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .col-h .name{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:8px}
+  .phase-dot{width:10px;height:10px;border-radius:50%}
+  .col-h .num{font-family:'Fraunces',serif;font-size:22px;font-weight:600}
+  .col-desc{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:.03em;margin:-6px 0 12px;line-height:1.4}
+  .lead{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,transform .08s}
+  .lead:hover{border-color:var(--ink);transform:translateX(2px)}
+  .col [draggable="true"]{cursor:grab}
+  .lead.dragging{opacity:.45;cursor:grabbing}
+  .col.dragover{border-color:var(--signal);background:var(--signal-dim);border-style:dashed}
+  .lead .ln{font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .lead .lm{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .plat{font-size:9px;text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--line-2);border-radius:20px;padding:1px 7px}
+  .fupbadge{font-family:'Space Mono',monospace;font-size:9px;background:var(--signal-dim);color:var(--signal);border-radius:20px;padding:2px 7px;font-weight:700}
+  .due{font-family:'Space Mono',monospace;font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700}
+  .due.today{background:var(--bad-bg);color:var(--bad)}
+  .due.soon{background:#fdf3dd;color:var(--warn)}
+  .due.later{background:var(--paper-2);color:var(--muted)}
+  .empty{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:30px 10px;line-height:1.6}
+
+  /* ---- table (lead list ALL) ---- */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+  th{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;padding:12px 12px;border-bottom:1.5px solid var(--line);background:var(--paper-2)}
+  td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr.row:hover{background:var(--paper-2)}
+  .statusdot{display:inline-flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .sd{width:9px;height:9px;border-radius:50%}
+  a.link{color:var(--signal);text-decoration:none;font-family:'Space Mono',monospace;font-size:11px;border-bottom:1px solid transparent}
+  a.link:hover{border-bottom-color:var(--signal)}
+
+  /* ---- modal ---- */
+  .scrim{position:fixed;inset:0;background:rgba(13,15,18,.5);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+  .scrim.show{display:flex}
+  .modal{background:var(--card);border:2px solid var(--ink);border-radius:18px;width:100%;max-width:560px;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:pop .25s ease}
+  @keyframes pop{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:none}}
+  .modal-h{padding:20px 24px;border-bottom:1.5px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .modal-h h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600}
+  .modal-b{padding:22px 24px}
+  .x{cursor:pointer;border:none;background:none;font-size:22px;line-height:1;color:var(--muted)}
+  .x:hover{color:var(--ink)}
+  label.f{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;font-weight:700}
+  input.f,select.f,textarea.f{width:100%;font-family:'Manrope',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink)}
+  input.f:focus,select.f:focus,textarea.f:focus{outline:none;border-color:var(--signal)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-foot{padding:18px 24px;border-top:1.5px solid var(--line);display:flex;gap:10px;justify-content:space-between;align-items:center}
+
+  /* ---- stage stepper inside modal ---- */
+  .stepper{display:flex;gap:6px;margin:8px 0 4px}
+  .step{flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:8px 4px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-weight:700;color:var(--muted);background:var(--paper)}
+  .step.on{color:var(--paper)}
+  .step[data-ph="intent"].on{background:var(--intent);border-color:var(--intent)}
+  .step[data-ph="engaged"].on{background:var(--engaged);border-color:var(--engaged)}
+  .step[data-ph="booked"].on{background:var(--booked);border-color:var(--booked)}
+  .step[data-ph="dead"].on{background:var(--muted);border-color:var(--muted)}
+
+  .quickrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+  /* ---- scripts / stimuli chain ---- */
+  .chain{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:900px){.chain{grid-template-columns:1fr}}
+  .scard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .scard h4{font-family:'Fraunces',serif;font-size:17px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .scard .meta{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+  .scard textarea{width:100%;min-height:80px;font-family:'Manrope';font-size:12.5px;padding:10px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);resize:vertical;line-height:1.5}
+  .scard textarea:focus{outline:none;border-color:var(--signal)}
+  .fupitem{margin-bottom:9px}
+  .fupitem .tag{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:block;margin-bottom:3px;letter-spacing:.05em}
+  /* individual follow-up block (one follow-up per block) */
+  .fupblock{border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:11px;background:var(--paper)}
+  .fupblock > .tag{font-family:'Space Mono',monospace;font-size:9px;color:var(--signal);display:block;margin-bottom:6px;letter-spacing:.06em;font-weight:700;text-transform:uppercase}
+  .fupblock textarea{width:100%;min-height:58px;font-family:'Manrope';font-size:12.5px;padding:9px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);resize:vertical;line-height:1.5}
+  .fupblock textarea:focus{outline:none;border-color:var(--signal)}
+  .gifrow{display:flex;align-items:center;gap:7px;margin-top:7px}
+  .gifrow .gico{font-size:13px;flex:none}
+  .gifinput{flex:1;min-width:0;font-family:'Space Mono',monospace;font-size:10.5px;padding:6px 9px;border:1.5px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)}
+  .gifinput:focus{outline:none;border-color:var(--signal)}
+  .gifprev{margin-top:7px}
+  .gifprev img{max-width:140px;max-height:120px;border-radius:8px;border:1.5px solid var(--line);display:block}
+  .gifprev .badgemini{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}
+  /* gif in the follow-up queue row */
+  .qgif{margin-top:8px;display:flex;align-items:center;gap:10px}
+  .qgif img{max-width:120px;max-height:100px;border-radius:8px;border:1.5px solid var(--line)}
+  .savednote{font-family:'Space Mono',monospace;font-size:10px;color:var(--go);opacity:0;transition:opacity .3s}
+  .savednote.show{opacity:1}
+
+  /* principles strip */
+  .princip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 4px}
+  @media(max-width:700px){.princip{grid-template-columns:1fr 1fr}}
+  .pcard{background:var(--ink);color:var(--paper);border-radius:12px;padding:14px 14px 16px}
+  .pcard .pn{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;opacity:.5}
+  .pcard .pt{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:4px 0 5px}
+  .pcard .pd{font-size:11px;line-height:1.45;opacity:.75}
+
+  .toolwrap{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(max-width:700px){.toolwrap{grid-template-columns:1fr}}
+  .tool{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .tool .tn{font-weight:700;font-size:13px}
+  .tool .td{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px}
+  .tool .tu{font-family:'Space Mono',monospace;font-size:10px;color:var(--signal)}
+
+  /* daily target bar */
+  .target{background:var(--ink);color:var(--paper);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .target .tlabel{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.65}
+  .target .big{font-family:'Fraunces',serif;font-size:34px;font-weight:600;line-height:1}
+  .bar{flex:1;min-width:200px;height:12px;background:rgba(255,255,255,.13);border-radius:20px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--signal);border-radius:20px;transition:width .5s ease}
+  .insight{background:var(--signal-dim);border:1.5px solid var(--signal);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.5;margin-top:16px;display:flex;gap:10px}
+  .insight b{font-weight:800}
+  .insight .ico{font-family:'Space Mono',monospace;color:var(--signal);font-weight:700;flex:none}
+
+  /* follow-up queue summary + groups */
+  .qsummary{background:var(--ink);color:var(--paper);border-radius:14px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:8px}
+  .qbig{font-family:'Fraunces',serif;font-size:42px;font-weight:600;line-height:1}
+  .qlabel{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.65;margin-top:4px}
+  .qmini{display:flex;gap:18px;font-family:'Space Mono',monospace;font-size:12px}
+  .qmini span{opacity:.85}.qmini b{font-size:16px;font-weight:700}
+  .qgroup-h{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:22px 0 10px;display:flex;align-items:center;gap:9px}
+  .qgroup-h .qn{background:var(--paper-2);border-radius:20px;padding:1px 9px;font-size:10px}
+  .qgroup-h .dot{width:9px;height:9px;border-radius:50%}
+  .qgroup-h .dot.today{background:var(--bad)}
+  .qgroup-h .dot.soon{background:var(--warn)}
+  .qgroup-h .dot.later{background:var(--muted)}
+  /* metrics time-range selector */
+  .rangebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .range-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .range-toggle{display:flex;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden;flex:none}
+  .range-btn{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.03em;border:none;background:var(--card);color:var(--muted);padding:8px 13px;cursor:pointer;border-right:1.5px solid var(--ink);transition:background .12s,color .12s}
+  .range-btn:last-child{border-right:none}
+  .range-btn.active{background:var(--signal);color:#fff}
+  .range-btn:not(.active):hover{background:var(--paper-2);color:var(--ink)}
+  .range-custom{display:none;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+  .range-custom.show{display:flex}
+  .range-custom input.f{width:auto;padding:7px 10px;font-size:12px}
+
+  /* language toggle in scripts tab */
+  .lang-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px}
+  .lang-toggle{display:flex;gap:0;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden;flex:none}
+  .lang-btn{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.04em;
+    border:none;background:var(--card);color:var(--muted);padding:9px 16px;cursor:pointer;transition:background .12s,color .12s}
+  .lang-btn:first-child{border-right:1.5px solid var(--ink)}
+  .lang-btn.active{background:var(--signal);color:#fff}
+  .lang-btn:not(.active):hover{background:var(--paper-2);color:var(--ink)}
+  /* import modal */
+  .mapgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+  @media(max-width:560px){.mapgrid{grid-template-columns:1fr}}
+  .mapgrid label.f{margin-top:0}
+  .mapgrid select.f{margin-top:5px}
+  .mapnote{font-family:'Space Mono',monospace;font-size:10px;line-height:1.5;color:var(--muted);background:var(--paper-2);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .imp-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .imp-tab{font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+    border:none;background:none;cursor:pointer;color:var(--muted);padding:9px 12px;position:relative}
+  .imp-tab.active{color:var(--ink)}
+  .imp-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2.5px;background:var(--signal)}
+  .imp-pane{display:none}.imp-pane.show{display:block}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;transition:border-color .15s,background .15s}
+  .drop.over{border-color:var(--signal);background:var(--signal-dim)}
+  .sync-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .sd2{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px}
+  .badge{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;flex:none}
+  .badge.auto{background:var(--go-bg);color:var(--go)}
+  .badge.man{background:var(--paper-2);color:var(--muted)}
+  .sync-note{font-size:12px;line-height:1.5;color:var(--ink);background:var(--signal-dim);border:1.5px solid var(--signal);border-radius:10px;padding:12px 14px;margin-top:14px}
+  .imp-prev-h{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+  .imp-prev{display:flex;flex-direction:column;gap:6px}
+  .imp-prow{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+  .card-step{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--signal);margin-top:6px;font-weight:700;letter-spacing:.02em}
+  /* the "which specific follow-up" box */
+  .stepbox{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
+  .step-tag{font-family:'Space Mono',monospace;font-size:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .step-tag b{font-weight:700}
+  .step-pin{width:8px;height:8px;border-radius:50%;flex:none}
+  .step-script{margin-top:8px;background:var(--paper);border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .qscript-text{font-size:12.5px;line-height:1.5;white-space:pre-wrap;flex:1}
+  .step-script .copybtn{flex:none}
+  .empty-script{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--muted);display:block}
+  .seed{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:14px}
+  .seed a{color:var(--signal);cursor:pointer;text-decoration:underline}
+
+  /* ---- A/B testing ---- */
+  .vbadge{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.04em;border-radius:20px;padding:1px 7px;border:1.5px solid var(--ink);color:var(--ink);background:var(--card)}
+  .vbadge.A{border-color:var(--intent);color:var(--intent)}
+  .vbadge.B{border-color:var(--signal);color:var(--signal)}
+  .vbadge.C{border-color:var(--engaged);color:var(--engaged)}
+  .abctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 18px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+  .abgrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:6px}
+  .abcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);position:relative}
+  .abcard.win{border-color:var(--go);box-shadow:0 0 0 2px var(--go-bg)}
+  .abcard.win::before{content:"LEADING";position:absolute;top:0;right:0;background:var(--go);color:#fff;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.1em;padding:3px 8px;border-radius:0 12px 0 10px}
+  .abcard h4{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:9px}
+  .abcard .abn{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+  .abcard .abmsg{font-size:12.5px;line-height:1.5;background:var(--paper);border:1.5px solid var(--line);border-radius:9px;padding:10px;margin-bottom:12px;min-height:54px;white-space:pre-wrap}
+  .abstat{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px dashed var(--line);font-family:'Space Mono',monospace;font-size:11px}
+  .abstat:last-child{border-bottom:none}
+  .abstat .k{color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .abstat .v{font-weight:700;font-size:14px}
+  .abstat .v.primary{color:var(--signal)}
+  .abverdict{background:var(--ink);color:var(--paper);border-radius:14px;padding:18px 22px;margin:6px 0 18px;line-height:1.55;font-size:13px}
+  .abverdict b{color:var(--signal)}
+  .vedithead{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--signal);margin:2px 0 6px}
+  .acctrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:9px;font-family:'Space Mono',monospace;font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .acctsel{font-family:'Space Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.03em;border:1.5px solid var(--ink);border-radius:8px;padding:6px 9px;background:var(--card);color:var(--ink);cursor:pointer;outline:none;max-width:160px}
+  .acctsel:focus{border-color:var(--signal)}
+  /* one-tap metric toggles on a lead row */
+  .qflags{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .qflag{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.02em;border:1.5px solid var(--line);background:var(--paper);color:var(--muted);border-radius:20px;padding:7px 13px;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+  .qflag:hover{border-color:var(--ink);color:var(--ink)}
+  .qflag.on{background:var(--go);border-color:var(--go);color:#fff}
+  .qflag.on.pos{background:var(--engaged);border-color:var(--engaged)}
+  .qflag.on.neg{background:var(--bad);border-color:var(--bad)}
+  .qflag.on.bk{background:var(--booked);border-color:var(--booked)}
+
+  .footer{margin-top:50px;border-top:1px solid var(--line);padding-top:18px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-align:center;line-height:1.7}
+
+  /* ---- auth / cloud ---- */
+  .authmsg{font-family:'Space Mono',monospace;font-size:11px;color:var(--bad);margin-top:12px;min-height:16px;line-height:1.5}
+  .authmsg.ok{color:var(--go)}
+  .authswitch{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:16px;text-align:center}
+  .authswitch a{color:var(--signal);cursor:pointer;text-decoration:underline}
+  .syncpill{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border-radius:20px;padding:4px 10px}
+  .syncpill.ok{background:var(--go-bg);color:var(--go)}
+  .syncpill.err{background:var(--bad-bg);color:var(--bad)}
+  .syncpill.busy{background:var(--paper-2);color:var(--muted)}
+  .mignote{font-family:'Space Mono',monospace;font-size:10.5px;line-height:1.7;color:var(--ink);background:var(--paper-2);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+  .mignote code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="plane"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></div>
+      <div>
+        <h1>DM Pitch System</h1>
+        <div class="sub">Outreach Engine · Inputs → Process → Output → Feedback</div>
+      </div>
+    </div>
+    <div class="topright">
+      <div class="pill"><span class="dotlive"></span> Live <b id="todayStr"></b></div>
+      <div class="pill" id="userPill" style="gap:6px"><b id="userName"></b> <span id="userRole" style="background:var(--signal);color:#fff;border-radius:20px;font-size:9px;padding:1px 7px"></span></div>
+      <div class="pill" id="setterPill" style="display:none;padding:5px 8px 5px 13px">🧑‍💼 <select id="setterSwitch" onchange="setSetterFilter(this.value)" style="border:none;background:none;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ink);outline:none"></select></div>
+      <div class="pill" style="padding:5px 8px 5px 13px">👤 <select id="acctSwitch" onchange="setActiveAccount(this.value)" style="border:none;background:none;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ink);outline:none"></select></div>
+      <div class="pill">Approached today <b id="approachedToday">0</b></div>
+      <span class="syncpill ok" id="syncPill">cloud ✓</span>
+      <button class="btn ghost" onclick="openImport()">⇪ Import</button>
+      <button class="btn sig" onclick="openLead()">+ New Lead</button>
+      <button class="btn ghost sm" onclick="doLogout()" title="Uitloggen">⏻</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="dash">Dashboard</button>
+    <button class="tab" data-view="send">Initial Outreach <span class="count" id="cntSend">0</span></button>
+    <button class="tab" data-view="pipe">Stimuli Pipeline <span class="count" id="cntPipe">0</span></button>
+    <button class="tab" data-view="today">Follow-up Queue <span class="count" id="cntDue">0</span></button>
+    <button class="tab" data-view="all">Lead List (ALL) <span class="count" id="cntAll">0</span></button>
+    <button class="tab" data-view="scripts">Scripts &amp; Chain</button>
+    <button class="tab" data-view="ab">A/B Tests</button>
+    <button class="tab" data-view="playbook">Playbook</button>
+  </nav>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view show" id="view-dash">
+    <div class="target">
+      <div>
+        <div class="tlabel">Volume is the game — daily IG outreach target</div>
+        <div class="big"><span id="appNow">0</span> / <span id="appGoal">30</span></div>
+      </div>
+      <div class="bar"><i id="appBar" style="width:0%"></i></div>
+      <button class="btn ghost sm" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Set target</button>
+    </div>
+
+    <div class="rangebar">
+      <span class="range-label">Metrics window</span>
+      <div class="range-toggle" id="rangeToggle">
+        <button class="range-btn" data-range="7">7 days</button>
+        <button class="range-btn active" data-range="30">30 days</button>
+        <button class="range-btn" data-range="90">90 days</button>
+        <button class="range-btn" data-range="all">All</button>
+        <button class="range-btn" data-range="custom">Custom</button>
+      </div>
+      <div class="range-custom" id="rangeCustom">
+        <input type="date" class="f" id="rangeFrom"> <span>→</span> <input type="date" class="f" id="rangeTo">
+      </div>
+    </div>
+
+    <div class="metrics" id="metricCards"></div>
+    <div id="bottleneckInsight"></div>
+
+    <div class="sec-h">Funnel throughput <span style="font-family:'Space Mono';font-size:11px;color:var(--muted);font-weight:400">— within the selected window</span></div>
+    <div class="sec-sub">Output of one stage is the input of the next. Find the stage that's choking the system.</div>
+    <div id="funnelFlow"></div>
+
+    <div id="teamStatsWrap" style="display:none">
+      <div class="sec-h">Team — per setter <span style="font-family:'Space Mono';font-size:11px;color:var(--muted);font-weight:400">— within the selected window</span></div>
+      <div class="sec-sub">Every setter's funnel side by side. Click a name to filter the whole app to that setter.</div>
+      <div style="overflow-x:auto" id="teamStats"></div>
+    </div>
+  </section>
+
+  <!-- ================= INITIAL OUTREACH (to send) ================= -->
+  <section class="view" id="view-send">
+    <div class="sec-h">Initial Outreach — first DM still to send</div>
+    <div class="sec-sub">Every imported lead lands here first. Nothing is counted as "approached" yet. Send the initial DM manually, then hit "Initial sent" to start the follow-up cadence.</div>
+    <div id="sendList"></div>
+  </section>
+
+  <!-- ================= PIPELINE ================= -->
+  <section class="view" id="view-pipe">
+    <div class="sec-h">The Stimuli Chain</div>
+    <div class="sec-sub">Human + Stimuli = Action. Move every lead through 3 phases until appointment booked.</div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- ================= FOLLOW-UP QUEUE ================= -->
+  <section class="view" id="view-today">
+    <div class="sec-h">Follow-up Queue</div>
+    <div class="sec-sub">Who needs a touch today — grouped by overdue / today / this week. 3 follow-ups for cold, up to 8 for engaged.</div>
+    <div id="dueList"></div>
+  </section>
+
+  <!-- ================= LEAD LIST ALL ================= -->
+  <section class="view" id="view-all">
+    <div class="sec-h">Metrics Tracker — Lead List (ALL)</div>
+    <div class="sec-sub">Every IG lead in the system. Mark seen / replied / booked as you work them.</div>
+    <div style="overflow-x:auto">
+      <table id="leadTable">
+        <thead><tr>
+          <th>Status</th><th>Name</th><th>Platform</th><th>Profile</th>
+          <th>Phase</th><th>Follow-ups</th><th>Next due</th><th></th>
+        </tr></thead>
+        <tbody id="leadBody"></tbody>
+      </table>
+    </div>
+    <div class="seed">No leads yet? <a onclick="seedDemo()">Load a demo lead set</a> to see the system in motion.</div>
+  </section>
+
+  <!-- ================= SCRIPTS ================= -->
+  <section class="view" id="view-scripts">
+    <div class="lang-bar">
+      <div>
+        <div class="sec-h" style="margin:0">Scripts &amp; Chain</div>
+        <div class="sec-sub" style="margin:2px 0 0">Instagram DM scripts. Keep a Dutch and an English version of every step.</div>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-btn active" data-lang="nl" onclick="setLang('nl')">🇳🇱 NL</button>
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+      </div>
+    </div>
+
+    <div class="sec-h" style="margin-top:22px">Initial message — the cheat code <span class="savednote" id="sv-initial">saved</span></div>
+    <div class="sec-sub">First DM. Each new lead is auto-assigned one variant below (round-robin). Compare results in the A/B Tests tab. Permission-to-pitch — say their first name, keep it vague.</div>
+    <div class="abctrl">Variants in rotation:
+      <div class="range-toggle" id="abVarToggle">
+        <button class="range-btn" data-abn="1">A only</button>
+        <button class="range-btn" data-abn="2">A / B</button>
+        <button class="range-btn" data-abn="3">A / B / C</button>
+      </div>
+      <span>“A only” = single message, no test.</span>
+    </div>
+    <div id="initialBlock" class="scard" style="margin-bottom:16px"></div>
+
+    <div class="sec-h">The follow-up chain</div>
+    <div class="sec-sub">Every follow-up is its own block — exactly one message each. Add an optional GIF URL per follow-up; it shows up in the queue so you can attach it.</div>
+    <div class="chain">
+      <div class="scard">
+        <h4><span class="phase-dot" style="background:var(--intent)"></span> Intent · I-FUP</h4>
+        <div class="meta">No reply → 3 follow-ups max (3 is the sweet spot)</div>
+        <div id="intentFups"></div>
+      </div>
+      <div class="scard">
+        <h4><span class="phase-dot" style="background:var(--engaged)"></span> Engaged · E-FUP</h4>
+        <div class="meta">Showed interest → up to 8 follow-ups. Most reply on #2–#5.</div>
+        <div id="engagedFups"></div>
+      </div>
+      <div class="scard">
+        <h4><span class="phase-dot" style="background:var(--booked)"></span> Booked · B-FUP</h4>
+        <div class="meta">Booking link sent → all follow-ups redirect to the calendar.</div>
+        <div id="bookedFups"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= A/B TESTS ================= -->
+  <section class="view" id="view-ab">
+    <div class="sec-h">A/B Test — initial message</div>
+    <div class="sec-sub">The first DM is the biggest lever on reply rate. Run variants head-to-head; every new lead is auto-assigned one (round-robin). Compared within the dashboard time window.</div>
+    <div id="abBody"></div>
+  </section>
+
+  <!-- ================= PLAYBOOK ================= -->
+  <section class="view" id="view-playbook">
+    <div class="sec-h">The 4 that matter most</div>
+    <div class="sec-sub">Get these right and you're playing outbound on easy mode.</div>
+    <div class="princip">
+      <div class="pcard"><div class="pn">01</div><div class="pt">Volume</div><div class="pd">It stays a volume game. Always ask: how do I 5×–10× this? "How many did you send?"</div></div>
+      <div class="pcard"><div class="pn">02</div><div class="pt">Follow-up</div><div class="pd">3 for cold, up to 8 for engaged. Most replies land on follow-up #2–#5.</div></div>
+      <div class="pcard"><div class="pn">03</div><div class="pt">Results</div><div class="pd">Sell the vacation, not the flight. "I can get you clients." Never the details.</div></div>
+      <div class="pcard"><div class="pn">04</div><div class="pt">Offer</div><div class="pd">The biggest variable. An irresistible offer multiplies even weak copy.</div></div>
+    </div>
+
+    <div class="sec-h" style="margin-top:34px">Hard rules</div>
+    <div class="sec-sub">Stick to these or nothing works.</div>
+    <div class="toolwrap" id="rulesWrap"></div>
+
+    <div class="sec-h" style="margin-top:34px">Outreach tools</div>
+    <div class="sec-sub">Make high volume bearable. Channel → recommended tool.</div>
+    <div class="toolwrap" id="toolsWrap"></div>
+
+    <div class="sec-h" style="margin-top:34px">KPI reference</div>
+    <div class="sec-sub">Instagram DM targets. ABR ≥ 2% = proof of concept → scale to the moon.</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Stage</th><th>Media seen</th><th>Positive reply</th><th>Booking send</th><th>Appointment booked</th></tr></thead>
+        <tbody>
+          <tr class="row"><td><b>Instagram DM</b></td><td>MSR 60%</td><td>PRR 6%</td><td>BSR 3%</td><td>ABR 2%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="footer">
+    DM PITCH SYSTEM · built on the outbound masterclass framework · data synced via Supabase cloud<br>
+    Always be consistent. Don't change anything until you have enough data. Data don't lie.
+  </div>
+</div>
+
+<!-- ================= LEAD MODAL ================= -->
+<div class="scrim" id="scrim">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="modalTitle">New Lead</h3>
+      <button class="x" onclick="closeLead()">×</button>
+    </div>
+    <div class="modal-b">
+      <div class="grid2">
+        <div><label class="f">Name</label><input class="f" id="f-name" placeholder="First name"></div>
+        <div><label class="f">Platform</label>
+          <select class="f" id="f-plat">
+            <option>Instagram</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div><label class="f">Username (IG handle)</label><input class="f" id="f-username" placeholder="@username"></div>
+        <div><label class="f">Instagram link</label><input class="f" id="f-link" placeholder="instagram.com/..."></div>
+      </div>
+
+      <label class="f">Phase in the chain</label>
+      <div class="stepper">
+        <div class="step" data-ph="intent" onclick="setPhase('intent')">Intent</div>
+        <div class="step" data-ph="engaged" onclick="setPhase('engaged')">Engaged</div>
+        <div class="step" data-ph="booked" onclick="setPhase('booked')">Booked</div>
+        <div class="step" data-ph="dead" onclick="setPhase('dead')">Dead / No</div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label class="f" id="lblFups">Follow-ups sent</label>
+          <input class="f" id="f-fups" type="number" min="0" value="0">
+        </div>
+        <div>
+          <label class="f">Next follow-up date</label>
+          <input class="f" id="f-due" type="date">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label class="f">Message language</label>
+          <select class="f" id="f-lang">
+            <option value="">Use toolbar language</option>
+            <option value="nl">🇳🇱 Dutch</option>
+            <option value="en">🇬🇧 English</option>
+          </select>
+        </div>
+        <div>
+          <label class="f">A/B test variant</label>
+          <select class="f" id="f-variant">
+            <option value="">Auto (round-robin)</option>
+            <option value="A">Variant A</option>
+            <option value="B">Variant B</option>
+            <option value="C">Variant C</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="f">Send video from (account)</label>
+      <select class="f" id="f-account"></select>
+
+      <label class="f">Tracking flags (the metrics)</label>
+      <div class="quickrow" id="flagRow"></div>
+
+      <label class="f">Notes</label>
+      <textarea class="f" id="f-notes" style="min-height:60px" placeholder="Reply gist, objections, where the bottleneck is..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" id="delBtn" onclick="deleteLead()" style="border-color:var(--bad);color:var(--bad)">Delete</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="closeLead()">Cancel</button>
+        <button class="btn sig" onclick="saveLead()">Save Lead</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= IMPORT MODAL ================= -->
+<div class="scrim" id="impScrim">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-h">
+      <h3>Import lead list</h3>
+      <button class="x" onclick="closeImport()">×</button>
+    </div>
+    <div class="modal-b">
+      <div class="imp-tabs">
+        <button class="imp-tab active" data-imp="paste" onclick="impTab('paste')">Paste / type</button>
+        <button class="imp-tab" data-imp="file" onclick="impTab('file')">Upload CSV</button>
+        <button class="imp-tab" data-imp="sync" onclick="impTab('sync')">Auto-tracking</button>
+        <button class="imp-tab" data-imp="migrate" onclick="impTab('migrate')">Oude data</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <label class="f" style="margin:0">Add these leads to account</label>
+        <div class="lang-toggle" id="impAcctToggle" style="flex:none"></div>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Which of your accounts works this batch.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <label class="f" style="margin:0">Default language for these leads</label>
+        <div class="lang-toggle" style="flex:none">
+          <button class="lang-btn active" data-implang="nl" onclick="setImpLang('nl')">🇳🇱 NL</button>
+          <button class="lang-btn" data-implang="en" onclick="setImpLang('en')">🇬🇧 EN</button>
+        </div>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Overridden by a “language” column if your file has one.</span>
+      </div>
+
+      <!-- paste -->
+      <div class="imp-pane show" id="imp-paste">
+        <label class="f">One IG lead per line. Optional columns separated by comma or tab:<br><span style="text-transform:none;color:var(--ink)">name, profile link, phase, language</span></label>
+        <textarea class="f" id="imp-text" style="min-height:150px;font-family:'Space Mono',monospace;font-size:12px" placeholder="Max, instagram.com/max
+Sanne, instagram.com/sanne, engaged
+Tom
+Lisa, instagram.com/lisa, booked"></textarea>
+        <select class="f" id="imp-defplat" style="display:none">
+          <option>Instagram</option>
+        </select>
+      </div>
+
+      <!-- file -->
+      <div class="imp-pane" id="imp-file">
+        <label class="f">Upload a CSV from a scraper, Sheets, or your CRM export</label>
+        <div class="drop" id="dropZone">
+          <input type="file" id="csvFile" accept=".csv,.txt,.tsv" style="display:none">
+          <div style="font-size:13px;margin-bottom:8px">Drop a CSV here, or</div>
+          <button class="btn ghost sm" onclick="document.getElementById('csvFile').click()">Choose file</button>
+          <div id="csvName" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px"></div>
+        </div>
+        <label class="f">Header mapping is auto-detected (name / platform / link / email / phase / seen / replied / booked).</label>
+      </div>
+
+      <!-- sync info -->
+      <div class="imp-pane" id="imp-sync">
+        <div class="sync-row"><div><b>IG "media seen"</b><div class="sd2">No official API. Mark manually when you see the seen tick.</div></div><span class="badge man">Manual</span></div>
+        <div class="sync-row"><div><b>IG replies (cold)</b><div class="sd2">Cold outreach replies — mark with "↗ Replied" in the queue.</div></div><span class="badge man">Manual</span></div>
+        <div class="sync-row"><div><b>IG replies (inbound)</b><div class="sd2">IG Business API can auto-capture replies from people who DM you — Phase 2.</div></div><span class="badge auto">API later</span></div>
+        <div class="sync-note">Instagram has <b>no safe automated way</b> to track cold-DM "seen" or proactively send DMs — scrapers/bots risk a ban. So mark seen / replied / booked manually (one tap in the Follow-up Queue). Later we can connect the <b>IG Business API</b> to auto-capture <i>inbound</i> replies only.</div>
+      </div>
+
+      <!-- migrate old localStorage data -->
+      <div class="imp-pane" id="imp-migrate">
+        <div class="mignote">
+          <b>Migreer je oude lokale data</b> (van het oude <code>index.html</code>-bestand):<br>
+          1. Open de oude app in de juiste Chrome-profiel.<br>
+          2. Druk <code>⌥⌘J</code> (console) en plak: <code>copy(localStorage.getItem('dmps-state'))</code> + Enter.<br>
+          3. De data staat nu op je klembord — plak hieronder en klik <b>Migreer</b>.
+        </div>
+        <textarea class="f" id="mig-text" style="min-height:120px;font-family:'Space Mono',monospace;font-size:10px" placeholder='{"leads":[...],"scripts":{...},...}'></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px">
+          <button class="btn sig sm" onclick="runMigrate()">⇪ Migreer oude data</button>
+        </div>
+        <div class="authmsg" id="migMsg"></div>
+      </div>
+
+      <div id="impMap"></div>
+      <div id="impPreview"></div>
+    </div>
+    <div class="modal-foot">
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)" id="impCount">0 leads ready</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="closeImport()">Cancel</button>
+        <button class="btn sig" id="impBtn" onclick="runImport()" disabled>Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= AUTH OVERLAY ================= -->
+<div class="scrim show" id="authScrim" style="background:var(--paper);backdrop-filter:none;align-items:center">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="plane"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></div>
+        <div><h3>DM Pitch System</h3><div class="sub" style="margin-top:3px">Team login</div></div>
+      </div>
+    </div>
+    <div class="modal-b">
+      <div id="authLogin">
+        <label class="f">E-mail</label><input class="f" id="auth-email" type="email" placeholder="jij@mail.com" autocomplete="username">
+        <label class="f">Wachtwoord</label><input class="f" id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+        <div class="authmsg" id="authMsg"></div>
+        <button class="btn sig" style="width:100%;margin-top:6px" onclick="doLogin()">Log in</button>
+        <div class="authswitch">Nog geen account? <a onclick="authMode('signup')">Account aanmaken</a></div>
+      </div>
+      <div id="authSignup" style="display:none">
+        <label class="f">Naam</label><input class="f" id="auth-name" placeholder="Voornaam" autocomplete="name">
+        <label class="f">E-mail</label><input class="f" id="auth-email2" type="email" placeholder="jij@mail.com" autocomplete="username">
+        <label class="f">Wachtwoord (min. 8 tekens)</label><input class="f" id="auth-pass2" type="password" placeholder="••••••••" autocomplete="new-password">
+        <div class="authmsg" id="authMsg2"></div>
+        <button class="btn sig" style="width:100%;margin-top:6px" onclick="doSignup()">Account aanmaken</button>
+        <div class="authswitch">Al een account? <a onclick="authMode('login')">Log in</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PHASES = {
+  intent:  {label:'Intent',  color:'var(--intent)',  maxFup:3, desc:'No reply yet · 3 follow-ups max'},
+  engaged: {label:'Engaged', color:'var(--engaged)', maxFup:8, desc:'Showed interest · up to 8 follow-ups'},
+  booked:  {label:'Booked',  color:'var(--booked)',  maxFup:8, desc:'Booking link sent · redirect to calendar'},
+  dead:    {label:'Dead / No',color:'var(--muted)',  maxFup:0, desc:'Closed out · revisit in 180 days'}
+};
+
+// the tracking flags that drive the metrics (mirrors your Notion KPIs)
+const FLAGS = [
+  {key:'approached', label:'Approached'},
+  {key:'seen',       label:'Media seen'},
+  {key:'positive',   label:'Positive reply'},
+  {key:'booksent',   label:'Booking link sent'},
+  {key:'booked',     label:'Appointment booked'}
+];
+
+const KPIS = [
+  {key:'MSR', name:'Media Seen Rate (MSR)', num:'seen',     den:'approached', kpi:60},
+  {key:'PRR', name:'Positive Reply Rate (PRR)', num:'positive', den:'approached', kpi:6},
+  {key:'BSR', name:'Booking Send Rate (BSR)', num:'booksent', den:'approached', kpi:3},
+  {key:'ABR', name:'Appointment Booking Rate (ABR)', num:'booked', den:'approached', kpi:2}
+];
+
+const RULES = [
+  ['Always be consistent','The #1 rule. Treat outreach like a sales call you can\'t skip.'],
+  ['POC before scale','Only scale what already books. No proof = no scaling.'],
+  ['Quantity AND quality','High volume of bad messages fails. You need both.'],
+  ['Don\'t copy-paste','Frameworks as guidance, never monkey-see-monkey-do.'],
+  ['Keep it vague','Curiosity is the cheat code. Don\'t reveal everything.'],
+  ['Mind the delay','Replies land 2–4 weeks later. Don\'t panic early.'],
+  ['3 answer types','Yes / No / F-off — all fine. Don\'t reply to the last one.'],
+  ['Enough data first','25 no-replies in a row is normal at 20% PRR. Don\'t change everything.']
+];
+
+const TOOLS = [
+  ['Personalized video','The initial stimulus — selfie/loom under 2.5 min','Loom'],
+  ['Booking link','One slot grabber in the booking message','Calendly'],
+  ['Account warm-up','Active profile + story posts so DMs land, not spam','Native IG'],
+  ['Inbound replies (later)','Auto-capture replies via IG Business API','Meta Graph API'],
+  ['Lead sourcing','Hashtag / follower / engagement lists → export CSV → Import here','Manual / scraper'],
+  ['This tracker','Funnel, follow-up cadence, KPIs','DM Pitch System']
+];
+
+let state = { leads:[], scripts:{nl:{},en:{}}, goal:30, lang:'nl' };
+let activeRange = '30';            // 7 | 30 | 90 | all | custom
+let customFrom = '', customTo = '';
+let editingId = null;
+let modalPhase = 'intent';
+let modalFlags = {};
+
+/* ---------- cloud persistence (Supabase) ---------- */
+const SUPABASE_URL  = 'https://vpytvszdaepvaaclwuao.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZweXR2c3pkYWVwdmFhY2x3dWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4Mjg1MjQsImV4cCI6MjA5NjQwNDUyNH0.1F2_0ZIlMwGBQVqCQdJA3JRjddLQNU3DEqoulGWOk0k';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let me = null;              // my profile row {id,email,name,role}
+let team = [];              // owner only: all profiles
+let setterFilter = 'all';   // owner only: which setter's data to view
+let lastSync = {};          // lead id -> JSON string as last synced (diff base)
+let sharedSnap = {};        // shared_state snapshots
+let userSnap = '';          // user_state snapshot
+let lastLoad = 0;
+
+function setterName(id){ const p = team.find(t=>t.id===id); return p ? (p.name||p.email) : '?'; }
+function stripPrivate(l){ const c = Object.assign({}, l); delete c._setter; return c; }
+/* which setter new leads belong to (owner can work "as" a setter via the filter) */
+function targetSetter(){ return (me && me.role==='owner' && setterFilter!=='all') ? setterFilter : me.id; }
+function setSetterFilter(v){ setterFilter = v; renderAll(); }
+function renderSetterSwitcher(){
+  const sel = document.getElementById('setterSwitch'); if(!sel) return;
+  sel.innerHTML = `<option value="all">Hele team</option>` +
+    team.map(t=>`<option value="${t.id}">${esc(t.name||t.email)}${t.role==='owner'?' (owner)':''}</option>`).join('');
+  sel.value = setterFilter;
+}
+
+function syncStatus(s){ // 'ok' | 'busy' | 'err'
+  const p = document.getElementById('syncPill'); if(!p) return;
+  p.className = 'syncpill '+s;
+  p.textContent = s==='ok' ? 'cloud ✓' : (s==='busy' ? 'sync…' : 'offline ⚠');
+}
+
+async function loadCloud(){
+  const [leadsRes, sharedRes, userRes] = await Promise.all([
+    sb.from('leads').select('id,setter_id,data'),
+    sb.from('shared_state').select('key,value'),
+    sb.from('user_state').select('data').eq('user_id', me.id).maybeSingle()
+  ]);
+  if(leadsRes.error){ alert('Kon leads niet laden: '+leadsRes.error.message); throw leadsRes.error; }
+  state.leads = (leadsRes.data||[]).map(r=>{ const l=r.data||{}; l.id=r.id; l._setter=r.setter_id; return l; });
+  lastSync = {}; state.leads.forEach(l=>{ lastSync[l.id] = JSON.stringify(stripPrivate(l)); });
+  const sh = {}; (sharedRes.data||[]).forEach(r=>sh[r.key]=r.value);
+  state.scripts    = sh.scripts || {nl:{},en:{}};
+  if(!state.scripts.nl) state.scripts.nl={};
+  if(!state.scripts.en) state.scripts.en={};
+  state.abVariants = (sh.abVariants && sh.abVariants.length) ? sh.abVariants : ['A','B'];
+  state.goal       = sh.goal || 30;
+  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal) };
+  const ud = (userRes.data && userRes.data.data) || {};
+  state.lang          = ud.lang || 'nl';
+  state.accounts      = (ud.accounts && ud.accounts.length) ? ud.accounts : [ (me.email||'account').split('@')[0].replace(/\./g,'') ];
+  state.activeAccount = ud.activeAccount || 'all';
+  userSnap = JSON.stringify({lang:state.lang, accounts:state.accounts, activeAccount:state.activeAccount});
+  lastLoad = Date.now();
+}
+
+/* debounce all saveState() calls into one diff-based cloud sync */
+let syncTimer = null, syncing = false, syncAgain = false;
+function saveState(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 600); syncStatus('busy'); }
+async function syncNow(){
+  syncTimer = null;
+  if(syncing){ syncAgain = true; return; }
+  syncing = true;
+  try{
+    // leads: upsert changed, delete removed
+    const cur = {}, ups = [];
+    state.leads.forEach(l=>{
+      if(!l._setter) l._setter = targetSetter();
+      const j = JSON.stringify(stripPrivate(l));
+      cur[l.id] = j;
+      if(lastSync[l.id] !== j) ups.push({id:l.id, setter_id:l._setter, data:JSON.parse(j), updated_at:new Date().toISOString()});
+    });
+    const dels = Object.keys(lastSync).filter(id=> !(id in cur));
+    if(ups.length){ const {error} = await sb.from('leads').upsert(ups); if(error) throw error; }
+    if(dels.length){ const {error} = await sb.from('leads').delete().in('id', dels); if(error) throw error; }
+    lastSync = cur;
+    // shared team state
+    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal};
+    for(const k in sh){
+      const j = JSON.stringify(sh[k]);
+      if(sharedSnap[k] !== j){
+        const {error} = await sb.from('shared_state').upsert({key:k, value:sh[k], updated_at:new Date().toISOString()});
+        if(error) throw error;
+        sharedSnap[k] = j;
+      }
+    }
+    // my prefs
+    const up = {lang:state.lang, accounts:state.accounts, activeAccount:state.activeAccount};
+    const j = JSON.stringify(up);
+    if(userSnap !== j){
+      const {error} = await sb.from('user_state').upsert({user_id:me.id, data:up, updated_at:new Date().toISOString()});
+      if(error) throw error;
+      userSnap = j;
+    }
+    syncStatus('ok');
+  }catch(e){ console.error('[sync]', e); syncStatus('err'); }
+  syncing = false;
+  if(syncAgain){ syncAgain = false; saveState(); }
+}
+
+/* ---------- auth ---------- */
+function authMode(m){
+  document.getElementById('authLogin').style.display  = m==='login'  ? 'block':'none';
+  document.getElementById('authSignup').style.display = m==='signup' ? 'block':'none';
+}
+async function doLogin(){
+  const msg = document.getElementById('authMsg'); msg.className='authmsg'; msg.textContent='Inloggen…';
+  const {error} = await sb.auth.signInWithPassword({
+    email: document.getElementById('auth-email').value.trim(),
+    password: document.getElementById('auth-pass').value
+  });
+  if(error){ msg.textContent = 'Inloggen mislukt: '+error.message; return; }
+  msg.textContent='';
+  startApp();
+}
+async function doSignup(){
+  const msg = document.getElementById('authMsg2'); msg.className='authmsg'; msg.textContent='Account aanmaken…';
+  const name = document.getElementById('auth-name').value.trim();
+  const {data, error} = await sb.auth.signUp({
+    email: document.getElementById('auth-email2').value.trim(),
+    password: document.getElementById('auth-pass2').value,
+    options: { data: { name } }
+  });
+  if(error){ msg.textContent = 'Mislukt: '+error.message; return; }
+  if(data.session){ msg.textContent=''; startApp(); }
+  else { msg.className='authmsg ok'; msg.textContent='Check je mail en klik de bevestigingslink — log daarna hier in.'; }
+}
+async function doLogout(){ await sb.auth.signOut(); location.reload(); }
+
+/* ---------- helpers ---------- */
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+function fmtPct(n){ return (n*100).toFixed(0)+'%'; }
+
+/* which date field stamps each tracked event */
+const FLAG_DATE = {approached:'approachDate', seen:'seenDate', positive:'positiveDate', negative:'negativeDate', booksent:'booksentDate', booked:'bookedDate'};
+
+/* current metrics window → {from,to} ISO (null = open-ended) */
+function windowBounds(){
+  if(activeRange==='all') return {from:null, to:null};
+  if(activeRange==='custom') return {from:customFrom||null, to:customTo||null};
+  const days = parseInt(activeRange);
+  const d = new Date(); d.setDate(d.getDate()-(days-1));
+  return {from:d.toISOString().slice(0,10), to:todayISO()};
+}
+/* number of days in the active window (null = open-ended / "All") */
+function windowDays(){
+  if(activeRange==='all') return null;
+  if(activeRange==='custom'){ if(!customFrom||!customTo) return null; return Math.round((new Date(customTo)-new Date(customFrom))/86400000)+1; }
+  return parseInt(activeRange);
+}
+function inWindow(dateISO){
+  if(!dateISO) return false;
+  const {from,to} = windowBounds();
+  if(from && dateISO < from) return false;
+  if(to && dateISO > to) return false;
+  return true;
+}
+/* event date for a flag, falling back to approachDate for legacy leads */
+function leadEventDate(l, flag){ return l[FLAG_DATE[flag]] || l.approachDate || null; }
+
+/* stamp today's date on any newly-true flag that has no date yet */
+function stampFlagDates(l){
+  FLAGS.forEach(f=>{
+    const df = FLAG_DATE[f.key];
+    if(l.flags && l.flags[f.key] && !l[df]) l[df] = todayISO();
+  });
+}
+
+function count(flag){
+  return visibleLeads().filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+}
+function ratio(num,den){ const d=count(den); return d? count(num)/d : 0; }
+
+/* ---------- A/B TEST + per-lead language helpers ---------- */
+function activeVariants(){ return (state.abVariants && state.abVariants.length) ? state.abVariants : ['A']; }
+function initialKey(v){ return (!v||v==='A') ? 'initial' : 'initial_'+v; }
+/* a lead's own language, falling back to the toolbar language */
+function leadLang(l){ return (l && (l.lang==='nl'||l.lang==='en')) ? l.lang : state.lang; }
+/* sending accounts (which IG profile sends the video / DM) */
+function accounts(){ return (state.accounts && state.accounts.length) ? state.accounts : ['account']; }
+/* don't force a lead's account into MY account list — owner sees setter accounts too */
+function leadAccount(l){ return (l && l.account) ? l.account : accounts()[0]; }
+/* every account that exists: my own + any on visible leads (for the header switcher) */
+function allAccounts(){
+  const s = new Set(accounts());
+  state.leads.forEach(l=>{ if(l.account) s.add(l.account); });
+  return [...s];
+}
+function setLeadAccount(id, acct){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  l.account = acct;
+  saveState(); renderAll();
+}
+/* the account you're currently working as ('all' = aggregate); owner also filters by setter */
+function visibleLeads(){
+  let ls = state.leads;
+  if(me && me.role==='owner' && setterFilter!=='all') ls = ls.filter(l=> (l._setter||me.id)===setterFilter);
+  const a = state.activeAccount;
+  if(!a || a==='all') return ls;
+  return ls.filter(l=> leadAccount(l)===a);
+}
+function setActiveAccount(v){
+  if(v==='__edit'){
+    const cur = accounts().join(', ');
+    const inp = prompt('Jouw IG-accounts (komma-gescheiden):', cur);
+    renderAccountSwitcher();
+    if(inp===null) return;
+    const list = inp.split(',').map(s=>s.trim().replace(/^@/,'')).filter(Boolean);
+    if(list.length){ state.accounts = list; if(state.activeAccount!=='all' && !list.includes(state.activeAccount)) state.activeAccount='all'; }
+    saveState(); renderAll();
+    return;
+  }
+  state.activeAccount=v; saveState(); renderAll();
+}
+/* inline "which account do I do this action from" picker for an action row */
+function accountSelectHTML(l){
+  const cur=leadAccount(l);
+  return `<select class="acctsel" title="Account you're doing this from" onchange="setLeadAccount('${l.id}', this.value)">${
+    accounts().map(a=>`<option value="${esc(a)}"${a===cur?' selected':''}>👤 @${esc(a)}</option>`).join('')
+  }</select>`;
+}
+function renderAccountSwitcher(){
+  const sel=document.getElementById('acctSwitch'); if(!sel) return;
+  sel.innerHTML = `<option value="all">All accounts</option>`+allAccounts().map(x=>`<option value="${esc(x)}">@${esc(x)}</option>`).join('')
+    +`<option value="__edit">✎ accounts bewerken…</option>`;
+  sel.value = state.activeAccount||'all';
+}
+/* the initial script (text + gif) for a given variant in a given language */
+function initialScript(v, lang){
+  const S = (state.scripts && state.scripts[lang||state.lang]) || {};
+  const key = initialKey(v);
+  return {text:S[key]||'', gif:S['gif_'+key]||''};
+}
+/* round-robin: hand the next lead the least-used active variant */
+function assignVariant(){
+  const vs = activeVariants();
+  const counts={}; vs.forEach(v=>counts[v]=0);
+  state.leads.forEach(l=>{ if(l.variant && counts[l.variant]!==undefined) counts[l.variant]++; });
+  let best=vs[0], bestN=Infinity;
+  vs.forEach(v=>{ if(counts[v]<bestN){ bestN=counts[v]; best=v; } });
+  return best;
+}
+function countV(flag, v){
+  return visibleLeads().filter(l=> l.variant===v && l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+}
+function ratioV(num,den,v){ const d=countV(den,v); return d? countV(num,v)/d : 0; }
+/* standard normal CDF (Abramowitz–Stegun erf approx) for a rough confidence read */
+function normCdf(z){
+  const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.3989423*Math.exp(-z*z/2);
+  const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return z>0 ? 1-p : p;
+}
+/* one-sided confidence that proportion s1/n1 beats s2/n2 (two-proportion z) */
+function propConfidence(s1,n1,s2,n2){
+  if(n1<1||n2<1) return 0;
+  const p1=s1/n1, p2=s2/n2, pp=(s1+s2)/(n1+n2);
+  const se=Math.sqrt(pp*(1-pp)*(1/n1+1/n2));
+  if(se===0) return 0;
+  return normCdf((p1-p2)/se);
+}
+
+/* ---------- RANGE SELECTOR ---------- */
+function setRange(r){
+  activeRange = r;
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active', b.dataset.range===r));
+  document.getElementById('rangeCustom').classList.toggle('show', r==='custom');
+  renderMetrics(); renderInsight(); renderFunnel(); renderAB();
+}
+
+/* ---------- METRIC CARDS ---------- */
+function renderMetrics(){
+  const wrap = document.getElementById('metricCards');
+  let html='';
+  // 1st card — outreaches DONE in the selected window vs expected volume
+  const today = todayISO();
+  const appToday = visibleLeads().filter(l=>l.flags && l.flags.approached && l.approachDate===today).length;
+  const outreaches = count('approached');           // already windowed
+  const days = windowDays();
+  const seats = (me && me.role==='owner' && setterFilter==='all') ? Math.max(1, team.length) : 1;
+  const target = days ? state.goal*days*seats : null;  // null for "All" → no KPI judgment
+  const meets = target!==null && outreaches>=target;
+  const volCls = target===null ? 'neutral' : (meets?'ok':'under');
+  const volTxt = target===null ? 'total' : (meets?'on KPI':'below');
+  const rangeLbl = {'7':'7d','30':'30d','90':'90d'}[activeRange] || (activeRange==='all'?'all time':'custom');
+  html += `<div class="mcard ${target!==null&&!meets?'alert':''}">
+    <div class="label">Outreaches done · ${rangeLbl}</div>
+    <div class="val">${outreaches}</div>
+    <div class="kpi">${target!==null?`Target ${target}`:'no target'} <span class="tag ${volCls}">${volTxt}</span></div>
+    <div class="denom">${appToday} today · goal ${state.goal}/day</div>
+  </div>`;
+  // rate KPI cards
+  KPIS.forEach(k=>{
+    const r = ratio(k.num,k.den);
+    const pct = r*100;
+    const kMeets = pct >= k.kpi;
+    const hasData = count(k.den)>0;
+    const tagCls = !hasData?'neutral':(kMeets?'ok':'under');
+    const tagTxt = !hasData?'no data':(kMeets?'on target':'below');
+    const alert = hasData && !kMeets;
+    html += `<div class="mcard ${alert?'alert':''}">
+      <div class="label">${k.name}</div>
+      <div class="val">${hasData?fmtPct(r):'—'}</div>
+      <div class="kpi">KPI ${k.kpi}% <span class="tag ${tagCls}">${tagTxt}</span></div>
+      <div class="denom">${count(k.num)} / ${count(k.den)} approached</div>
+    </div>`;
+  });
+  wrap.innerHTML = html;
+
+  const dayGoal = state.goal*seats;
+  document.getElementById('appNow').textContent = appToday;
+  document.getElementById('appGoal').textContent = dayGoal;
+  document.getElementById('appBar').style.width = Math.min(100,(appToday/dayGoal)*100)+'%';
+  document.getElementById('approachedToday').textContent = appToday;
+}
+
+/* ---------- TEAM TABLE (owner) — per-setter funnel within the window ---------- */
+function renderTeam(){
+  const wrap = document.getElementById('teamStatsWrap'); if(!wrap) return;
+  if(!me || me.role!=='owner'){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const today = todayISO();
+  const cnt = (ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  const pct = (n,d)=> d ? (n/d*100).toFixed(0)+'%' : '—';
+  let html = `<table><thead><tr>
+    <th>Setter</th><th>Vandaag</th><th>Approached</th><th>MSR</th><th>PRR</th><th>BSR</th><th>ABR</th><th>Booked</th>
+  </tr></thead><tbody>`;
+  team.forEach(t=>{
+    const ls = state.leads.filter(l=> (l._setter||me.id)===t.id);
+    const ap = cnt(ls,'approached');
+    const tod = ls.filter(l=> l.flags && l.flags.approached && l.approachDate===today).length;
+    const todCls = tod>=state.goal ? 'ok' : 'under';
+    html += `<tr class="row" style="cursor:pointer" onclick="setSetterFilter('${t.id}');document.getElementById('setterSwitch').value='${t.id}'">
+      <td><b>${esc(t.name||t.email)}</b>${t.role==='owner'?' <span class="plat">owner</span>':''}</td>
+      <td><span class="tag ${todCls}" style="font-family:'Space Mono';font-size:11px;padding:2px 8px;border-radius:20px">${tod} / ${state.goal}</span></td>
+      <td style="font-family:'Space Mono';font-size:12px">${ap}</td>
+      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'seen'),ap)}</td>
+      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'positive'),ap)}</td>
+      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'booksent'),ap)}</td>
+      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'booked'),ap)}</td>
+      <td style="font-family:'Space Mono';font-size:12px"><b>${cnt(ls,'booked')}</b></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('teamStats').innerHTML = html;
+}
+
+/* ---------- BOTTLENECK INSIGHT ---------- */
+function renderInsight(){
+  const box = document.getElementById('bottleneckInsight');
+  if(count('approached')<10){
+    box.innerHTML = `<div class="insight"><span class="ico">!</span><div>Not enough data yet. At a 6% reply rate a streak of 25 no-replies is totally normal — <b>don't change anything until you have volume.</b> Keep approaching.</div></div>`;
+    return;
+  }
+  // find weakest stage relative to KPI
+  let worst=null, worstGap=99;
+  KPIS.forEach(k=>{
+    const gap = (ratio(k.num,k.den)*100) - k.kpi;
+    if(gap < worstGap){ worstGap=gap; worst=k; }
+  });
+  if(worstGap>=0){
+    box.innerHTML = `<div class="insight" style="background:var(--go-bg);border-color:var(--go)"><span class="ico" style="color:var(--go)">✓</span><div>Every stage is at or above KPI. <b>This is proof of concept.</b> If ABR ≥ 2%, stop tweaking — hire setters and scale the volume to the moon.</div></div>`;
+  }else{
+    const fixes = {MSR:'Your initial stimulus / send-time is weak — fewer people even see it. Test a more novel opener or warm accounts.',
+      PRR:'People see it but don\'t bite. Sharpen the offer and the hook — sell the outcome, not the method.',
+      BSR:'They reply positive but you\'re not getting the link out. Tighten the engaged → booking transition (VSL under 2.5 min).',
+      ABR:'They get the link but don\'t book. The offer or the booking message is the choke point.'};
+    box.innerHTML = `<div class="insight"><span class="ico">▲</span><div><b>Bottleneck: ${worst.name}</b> — running ${fmtPct(ratio(worst.num,worst.den))} vs ${worst.kpi}% KPI. ${fixes[worst.key]}</div></div>`;
+  }
+}
+
+/* ---------- FUNNEL FLOW ---------- */
+function renderFunnel(){
+  const stages = [
+    {label:'Approached', n:count('approached'), c:'var(--ink)'},
+    {label:'Seen', n:count('seen'), c:'var(--intent)'},
+    {label:'Positive reply', n:count('positive'), c:'var(--engaged)'},
+    {label:'Booking sent', n:count('booksent'), c:'var(--signal)'},
+    {label:'Booked', n:count('booked'), c:'var(--booked)'}
+  ];
+  const max = Math.max(1, stages[0].n);
+  let html = '<div style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)">';
+  stages.forEach((s,i)=>{
+    const w = Math.max(4,(s.n/max)*100);
+    const conv = i>0 && stages[i-1].n>0 ? ' · '+((s.n/stages[i-1].n)*100).toFixed(0)+'% step' : '';
+    html += `<div style="margin-bottom:13px">
+      <div style="display:flex;justify-content:space-between;font-family:'Space Mono';font-size:11px;margin-bottom:5px">
+        <span style="text-transform:uppercase;letter-spacing:.05em;font-weight:700">${s.label}</span>
+        <span style="color:var(--muted)">${s.n}${conv}</span></div>
+      <div style="height:18px;background:var(--paper-2);border-radius:8px;overflow:hidden">
+        <div style="height:100%;width:${w}%;background:${s.c};border-radius:8px;transition:width .5s"></div></div>
+    </div>`;
+  });
+  const neg = count('negative'), pos = count('positive'), totRep = pos+neg;
+  const posShare = totRep ? Math.round(pos/totRep*100) : 0;
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px;padding-top:14px;border-top:1.5px dashed var(--line);font-family:'Space Mono';font-size:11px">
+      <span style="text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--bad)">🚫 Negative replies</span>
+      <span style="color:var(--muted)">${neg}${totRep?` · ${posShare}% of ${totRep} replies were positive`:''}</span></div>`;
+  html += '</div>';
+  document.getElementById('funnelFlow').innerHTML = html;
+}
+
+/* ---------- PIPELINE BOARD ---------- */
+function renderBoard(){
+  const board = document.getElementById('board');
+  let html='';
+  const vis = visibleLeads();
+  ['intent','engaged','booked'].forEach(ph=>{
+    const ls = vis.filter(l=>l.phase===ph);
+    html += `<div class="col" data-phase="${ph}" ondragover="allowDrop(event)" ondragenter="event.preventDefault();this.classList.add('dragover')" ondragleave="if(event.target===this)this.classList.remove('dragover')" ondrop="dropLead(event,'${ph}')">
+      <div class="col-h">
+        <div class="name"><span class="phase-dot" style="background:${PHASES[ph].color}"></span>${PHASES[ph].label}</div>
+        <div class="num">${ls.length}</div>
+      </div>
+      <div class="col-desc">${PHASES[ph].desc}</div>`;
+    if(ls.length===0){ html += `<div class="empty">No leads here.<br>Move someone in or add new.</div>`; }
+    ls.forEach(l=>html+=leadCardHTML(l));
+    html += `</div>`;
+  });
+  board.innerHTML = html;
+  document.getElementById('cntPipe').textContent = vis.filter(l=>l.phase!=='dead').length;
+}
+
+/* ---------- DRAG & DROP between pipeline columns ---------- */
+let dragId = null;
+function dragLead(e, id){
+  dragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain', id); }catch(_){}
+  e.currentTarget.classList.add('dragging');
+}
+function dragEnd(e){ e.currentTarget.classList.remove('dragging'); }
+function allowDrop(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
+function dropLead(e, phase){
+  e.preventDefault();
+  document.querySelectorAll('.col.dragover').forEach(c=>c.classList.remove('dragover'));
+  const id = dragId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+  dragId = null;
+  if(id) moveLeadPhase(id, phase);
+}
+/* change a lead's phase + keep flags / cadence consistent with the funnel */
+function moveLeadPhase(id, phase){
+  const l = state.leads.find(x=>x.id===id); if(!l || l.phase===phase) return;
+  l.flags = l.flags || {};
+  l.phase = phase;
+  if(phase==='engaged'){
+    l.flags.approached = l.flags.seen = l.flags.positive = true;
+    l.fups = 0;
+    const d=new Date(); d.setDate(d.getDate()+1); l.due = d.toISOString().slice(0,10);
+  } else if(phase==='booked'){
+    l.flags.approached = l.flags.seen = l.flags.positive = l.flags.booksent = l.flags.booked = true;
+    l.fups = 0; l.due = '';
+  } else if(phase==='intent'){
+    l.flags.approached = true;        // it's in the board, so it's been sent
+    if(!l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due = d.toISOString().slice(0,10); }
+  }
+  stampFlagDates(l);
+  saveState(); renderAll();
+}
+function leadCardHTML(l){
+  const due = dueBadge(l);
+  const step = nextStep(l);
+  return `<div class="lead" draggable="true" ondragstart="dragLead(event,'${l.id}')" ondragend="dragEnd(event)" onclick="openLead('${l.id}')">
+    <div class="ln">${esc(l.name||'(no name)')} ${due}</div>
+    <div class="lm"><span class="plat">${l.platform}</span>
+      ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
+      ${(l.flags&&l.flags.approached)?`<span class="fupbadge">FUP ${l.fups||0}/${PHASES[l.phase].maxFup}</span>`:`<span class="due today">to send</span>`}</div>
+    <div class="card-step">→ ${step.tag}</div>
+    ${quickFlagsHTML(l)}
+  </div>`;
+}
+function dueBadge(l){
+  if(!l.due || l.phase==='dead' || l.phase==='booked') return '';
+  const today = todayISO();
+  let cls='later', txt=l.due.slice(5);
+  if(l.due<=today){cls='today';txt='due';}
+  else{ const diff=(new Date(l.due)-new Date(today))/86400000; if(diff<=2)cls='soon'; }
+  return `<span class="due ${cls}">${txt}</span>`;
+}
+
+/* ---------- INITIAL OUTREACH (first DM not sent yet) ---------- */
+function renderSend(){
+  const wrap = document.getElementById('sendList');
+  const leads = visibleLeads().filter(l=> l.phase!=='dead' && !(l.flags && l.flags.approached));
+  document.getElementById('cntSend').textContent = leads.length;
+
+  let html = `<div class="qsummary">
+    <div><div class="qbig">${leads.length}</div><div class="qlabel">${leads.length===1?'lead waits':'leads wait'} for the first DM</div></div>
+    <div class="qmini" style="align-items:center;gap:14px">
+      <span>Not counted as approached until you mark the initial as sent.</span>
+      ${leads.length?`<button class="btn ghost sm" onclick="purgeNotSent()" style="border-color:var(--paper);color:var(--paper)" title="Delete every lead you haven't messaged">✕ Delete all ${leads.length}</button>`:''}
+    </div>
+  </div>`;
+  if(!leads.length){
+    html += `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-top:14px">Nothing to send. Import a lead list — every new lead lands here first.</div>`;
+    wrap.innerHTML = html; return;
+  }
+  html += '<div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">';
+  leads.forEach(l=> html += sendRowHTML(l));
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+function sendRowHTML(l){
+  const lang = leadLang(l);
+  const iv = initialScript(l.variant, lang);
+  const txt = iv.text ? esc(iv.text) : '', gif = iv.gif;
+  const vb = l.variant ? `<span class="vbadge ${l.variant}">Var ${l.variant}</span>` : '';
+  const langSet = (l.lang==='nl'||l.lang==='en');
+  const langToggle = `<div class="lang-toggle" style="flex:none;transform:scale(.82);transform-origin:right">
+      <button class="lang-btn ${lang==='nl'?'active':''}" onclick="setLeadLang('${l.id}','nl')">🇳🇱 NL</button>
+      <button class="lang-btn ${lang==='en'?'active':''}" onclick="setLeadLang('${l.id}','en')">🇬🇧 EN</button>
+    </div>`;
+  return `<div class="lead" style="cursor:default;margin:0">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(no name)')}
+          ${vb}<span class="due today">initial not sent</span>${langSet?'':'<span class="due later" title="No language set on this lead — using toolbar default">lang?</span>'}</div>
+        <div class="lm"><span class="plat">${l.platform}</span>
+          ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
+          ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profile ↗</a>`:''}</div>
+      </div>
+      <div style="display:flex;gap:7px;flex:none;flex-wrap:wrap;justify-content:flex-end;align-items:center">
+        ${accountSelectHTML(l)}
+        ${langToggle}
+        <button class="btn sig sm" onclick="markInitialSent('${l.id}')" title="You sent the first DM">✓ Initial sent</button>
+        <button class="btn ghost sm" onclick="openLead('${l.id}')">Edit</button>
+        <button class="btn ghost sm" onclick="skipLead('${l.id}')" style="border-color:var(--bad);color:var(--bad)" title="Delete this lead entirely — no follow-up">✕ Delete</button>
+      </div>
+    </div>
+    <div class="stepbox">
+      <div class="step-tag"><span class="step-pin" style="background:var(--intent)"></span><b>Initial message${l.variant?` · Variant ${l.variant}`:''}</b> &nbsp;·&nbsp; <span style="color:var(--muted)">${lang==='nl'?'Dutch':'English'} · first DM</span></div>
+      ${ txt
+          ? `<div class="step-script"><span class="qscript-text">${txt}</span>
+               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${txt.replace(/"/g,'&quot;')}">Copy</button></div>`
+          : `<div class="step-script empty-script">No initial script yet — add it in the Scripts &amp; Chain tab.</div>` }
+      ${ gif
+          ? `<div class="qgif"><img src="${esc(gif)}" alt="gif"><button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(gif).replace(/"/g,'&quot;')}">Copy GIF URL</button></div>`
+          : '' }
+    </div>
+  </div>`;
+}
+/* you sent the first DM → now it's approached + enters the follow-up cadence */
+/* set a single lead's message language (NL/EN) */
+function setLeadLang(id, lang){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  l.lang = lang;
+  saveState(); renderAll();
+}
+function markInitialSent(id){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  if(!l.variant) l.variant = assignVariant();
+  l.account = leadAccount(l);              // stamp which account sent the initial
+  l.flags = Object.assign({}, l.flags, {approached:true});
+  l.approachDate = todayISO();
+  l.phase = 'intent'; l.fups = 0;
+  const d = new Date(); d.setDate(d.getDate()+intentGap(0)); l.due = d.toISOString().slice(0,10);
+  stampFlagDates(l);
+  saveState(); renderAll();
+}
+/* delete EVERY lead you haven't sent an initial message to (current account scope) */
+function purgeNotSent(){
+  const targets = visibleLeads().filter(l=> l.phase!=='dead' && !(l.flags && l.flags.approached));
+  if(!targets.length){ alert('Nothing to delete — every lead here already got an initial message.'); return; }
+  const scope = (state.activeAccount && state.activeAccount!=='all') ? ' for @'+state.activeAccount : '';
+  if(!confirm('Delete all '+targets.length+' lead'+(targets.length===1?'':'s')+' you haven\'t sent an initial message to'+scope+'?\nThis is permanent.')) return;
+  const ids = new Set(targets.map(l=>l.id));
+  state.leads = state.leads.filter(l=> !ids.has(l.id));
+  saveState(); renderAll();
+}
+
+/* one-tap metric markers (media seen / positive reply / booking / booked) straight on a row */
+function toggleLeadFlag(id, flag){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  l.flags = l.flags || {};
+  const turningOn = !l.flags[flag];
+  l.flags[flag] = turningOn;
+  if(turningOn){
+    // turning a flag on implies the earlier funnel steps happened + advances the phase
+    if(flag==='booked'){ l.flags.approached=l.flags.seen=l.flags.positive=l.flags.booksent=true; l.flags.negative=false; l.phase='booked'; l.fups=0; l.due=''; }
+    else if(flag==='booksent'){ l.flags.approached=l.flags.seen=l.flags.positive=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; } }
+    else if(flag==='positive'){ l.flags.approached=l.flags.seen=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; const d=new Date(); d.setDate(d.getDate()+1); l.due=d.toISOString().slice(0,10); } }
+    else if(flag==='negative'){ l.flags.approached=l.flags.seen=true; l.flags.positive=l.flags.booksent=l.flags.booked=false; l.phase='dead'; l.due=''; if(!l.negativeDate) l.negativeDate=todayISO(); }
+    else if(flag==='seen'){ l.flags.approached=true; }
+    stampFlagDates(l);
+  } else {
+    // turning a flag back off — undo the side-effects where it makes sense
+    if(flag==='negative' && l.phase==='dead'){ l.phase = l.flags.positive?'engaged':'intent'; if(l.flags.approached && !l.due){ const d=new Date(); d.setDate(d.getDate()+intentGap(l.fups||0)); l.due=d.toISOString().slice(0,10); } }
+  }
+  saveState(); renderAll();
+}
+function quickFlagsHTML(l){
+  const f = l.flags||{};
+  const chip=(flag,label,extra)=>`<button class="qflag ${f[flag]?'on '+(extra||''):''}" onclick="event.stopPropagation();toggleLeadFlag('${l.id}','${flag}')">${f[flag]?'✓ ':''}${label}</button>`;
+  return `<div class="qflags">
+    ${chip('seen','👁 Media seen')}
+    ${chip('positive','💬 Positive','pos')}
+    ${chip('negative','🚫 No / not interested','neg')}
+    ${chip('booksent','📅 Booking sent')}
+    ${chip('booked','✅ Booked','bk')}
+  </div>`;
+}
+
+/* Skip = delete the lead entirely (no follow-up, gone from every view) */
+function skipLead(id){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  if(!confirm('Delete '+(l.name?'"'+l.name+'"':'this lead')+'? It is removed completely — no follow-up.')) return;
+  state.leads = state.leads.filter(x=>x.id!==id);
+  saveState(); renderAll();
+}
+
+/* ---------- FOLLOW-UP QUEUE (bucketed by when) ---------- */
+function dayDiff(iso){ return Math.round((new Date(iso) - new Date(todayISO()))/86400000); }
+
+/* work out WHICH specific step a lead is on, + the script for it.
+   fups = number of follow-ups already logged in the current phase. */
+function nextStep(l){
+  const f = l.fups||0;
+  const LANG = leadLang(l);
+  const S = (state.scripts && state.scripts[LANG]) ? state.scripts[LANG] : {};
+  const g = (key)=> S['gif_'+key]||'';
+
+  if(l.phase==='intent'){
+    if(!(l.flags && l.flags.approached)){
+      const iv=initialScript(l.variant, leadLang(l));
+      return {tag:'Initial outreach — not sent', detail:'Send the first DM', script:iv.text, gif:iv.gif, num:0, max:3, initial:true};
+    }
+    if(f<3)  return {tag:`Intent FUP ${f+1} / 3`, detail:'No reply yet · 3 max', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:3};
+    return {tag:'Intent — limit reached', detail:'3 follow-ups done. Stop or mark dead.', script:'', gif:'', num:f, max:3};
+  }
+  if(l.phase==='engaged'){
+    if(f===0) return {tag:'Send Evergreen VSL', detail:'They replied 👍 — send the video (<2.5 min)', script:S.vsl||'', gif:g('vsl'), num:0, max:8, vsl:true};
+    if(f<=8) return {tag:`Engaged FUP ${f} / 8`, detail:'Most reply on #2–#5', script:S['efup'+f]||'(add E-FUP '+f+' in Scripts)', gif:g('efup'+f), num:f, max:8};
+    return {tag:'Engaged — limit reached', detail:'8 follow-ups done.', script:'', gif:'', num:f, max:8};
+  }
+  if(l.phase==='booked'){
+    if(f===0) return {tag:'Send Booking message', detail:'Drop the calendar link', script:S.booking||'', gif:g('booking'), num:0, max:8};
+    if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'All roads → booking link', script:S['bfup'+f]||'(add B-FUP '+f+' in Scripts)', gif:g('bfup'+f), num:f, max:8};
+    return {tag:'Booking — limit reached', detail:'', script:'', gif:'', num:f, max:8};
+  }
+  return {tag:'—', detail:'', script:'', gif:'', num:0, max:0};
+}
+
+function renderDue(){
+  const wrap = document.getElementById('dueList');
+  const today = todayISO();
+  const due = visibleLeads()
+    .filter(l=>l.due && l.phase!=='dead' && l.phase!=='booked' && l.flags && l.flags.approached)
+    .sort((a,b)=> (a.due||'')<(b.due||'')?-1:1);
+
+  // buckets
+  const buckets = {
+    overdue:{title:'Overdue — chase these first', items:[], cls:'today'},
+    today:  {title:'Today', items:[], cls:'today'},
+    week:   {title:'This week', items:[], cls:'soon'},
+    later:  {title:'Later', items:[], cls:'later'}
+  };
+  due.forEach(l=>{
+    const d = dayDiff(l.due);
+    if(d < 0) buckets.overdue.items.push(l);
+    else if(d === 0) buckets.today.items.push(l);
+    else if(d <= 7) buckets.week.items.push(l);
+    else buckets.later.items.push(l);
+  });
+
+  const todayCount = buckets.overdue.items.length + buckets.today.items.length;
+  document.getElementById('cntDue').textContent = todayCount;
+
+  // top summary header — answers "who do I follow up with today"
+  let html = `<div class="qsummary">
+    <div>
+      <div class="qbig">${todayCount}</div>
+      <div class="qlabel">${todayCount===1?'lead needs':'leads need'} a follow-up right now</div>
+    </div>
+    <div class="qmini">
+      <span><b style="color:var(--bad)">${buckets.overdue.items.length}</b> overdue</span>
+      <span><b>${buckets.today.items.length}</b> today</span>
+      <span><b style="color:var(--warn)">${buckets.week.items.length}</b> this week</span>
+    </div>
+  </div>`;
+
+  if(due.length===0){
+    html += `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-top:14px">Nothing queued. Add a follow-up date on a lead (or hit "+ Follow-up") to put it in this list.</div>`;
+    wrap.innerHTML = html; return;
+  }
+
+  ['overdue','today','week','later'].forEach(key=>{
+    const b = buckets[key];
+    if(b.items.length===0) return;
+    html += `<div class="qgroup-h"><span class="dot ${b.cls}"></span>${b.title} <span class="qn">${b.items.length}</span></div>`;
+    html += '<div style="display:flex;flex-direction:column;gap:9px">';
+    b.items.forEach(l=> html += dueRowHTML(l));
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function dueRowHTML(l){
+  const max = PHASES[l.phase].maxFup;
+  const exhausted = (l.fups||0)>=max;
+  const d = dayDiff(l.due);
+  let when = l.due.slice(5);
+  if(d<0) when = Math.abs(d)+'d late';
+  else if(d===0) when = 'today';
+  else if(d===1) when = 'tomorrow';
+  else when = 'in '+d+'d';
+  const whenCls = d<0?'today':(d<=2?'soon':'later');
+
+  const step = nextStep(l);
+  const scriptText = step.script ? esc(step.script) : '';
+
+  return `<div class="lead" style="cursor:default;margin:0">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(no name)')}
+          <span class="due ${whenCls}">${when}</span>
+          <span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></div>
+        <div class="lm"><span class="plat">${l.platform}</span>
+          ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
+          ${l.variant?`<span class="vbadge ${l.variant}">Var ${l.variant}</span>`:''}
+          <span class="plat">${leadLang(l)==='en'?'EN':'NL'}</span>
+          <span class="plat" style="border-color:var(--signal);color:var(--signal)" title="Send this follow-up from the same account as before">📤 from @${esc(leadAccount(l))}</span>
+          <span class="fupbadge">FUP ${l.fups||0}/${max}</span>
+          ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profile ↗</a>`:''}
+          ${l.notes?`<span style="color:var(--muted);font-size:10px">· ${esc(l.notes).slice(0,40)}</span>`:''}</div>
+      </div>
+      <div style="display:flex;gap:7px;flex:none;flex-wrap:wrap;justify-content:flex-end;align-items:center">
+        ${accountSelectHTML(l)}
+        <button class="btn ghost sm" ${exhausted?'disabled':''} onclick="logFollowup('${l.id}')" title="Logged — schedule next">✓ Follow-up sent</button>
+        <button class="btn ghost sm" onclick="snooze('${l.id}',1)" title="Push one day">Snooze</button>
+        <button class="btn ghost sm" onclick="openLead('${l.id}')">Edit</button>
+      </div>
+    </div>
+    ${quickFlagsHTML(l)}
+    <div class="stepbox">
+      <div class="step-tag"><span class="step-pin" style="background:${PHASES[l.phase].color}"></span><b>${step.tag}</b>${step.detail?` &nbsp;·&nbsp; <span style="color:var(--muted)">${step.detail}</span>`:''}</div>
+      ${ scriptText
+          ? `<div class="step-script"><span class="qscript-text">${scriptText}</span>
+               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${scriptText.replace(/"/g,'&quot;')}">Copy</button></div>`
+          : `<div class="step-script empty-script">No script saved for this step — add it in the Scripts &amp; Chain tab.</div>` }
+      ${ step.gif
+          ? `<div class="qgif"><img src="${esc(step.gif)}" alt="gif"><button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(step.gif).replace(/"/g,'&quot;')}">Copy GIF URL</button></div>`
+          : '' }
+    </div>
+  </div>`;
+}
+
+function copyScript(btn){
+  const txt = btn.getAttribute('data-copy');
+  const ta = document.createElement('textarea'); ta.value = txt;
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  const old = btn.textContent; btn.textContent='Copied'; btn.classList.add('sig');
+  setTimeout(()=>{ btn.textContent=old; btn.classList.remove('sig'); },1100);
+}
+
+/* push a lead's next touch out by n days */
+function snooze(id,n){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  const base = l.due && l.due>todayISO() ? new Date(l.due) : new Date();
+  base.setDate(base.getDate()+n);
+  l.due = base.toISOString().slice(0,10);
+  saveState(); renderAll();
+}
+
+/* they replied — bump to next phase, set flags, reset cadence */
+function markReplied(id){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  if(l.phase==='intent'){
+    l.phase='engaged'; l.flags=Object.assign({},l.flags,{seen:true,positive:true}); l.fups=0;
+  } else if(l.phase==='engaged'){
+    l.phase='booked'; l.flags=Object.assign({},l.flags,{booksent:true,booked:true}); l.fups=0; l.due='';
+  }
+  if(l.phase!=='booked'){ const d=new Date(); d.setDate(d.getDate()+1); l.due=d.toISOString().slice(0,10); }
+  stampFlagDates(l);
+  saveState(); renderAll();
+}
+
+/* cold (intent) cadence: initial→FUP1 +1d, FUP1→FUP2 +3d, FUP2→FUP3 +5d */
+const INTENT_GAPS = [1,3,5];
+function intentGap(fups){ return INTENT_GAPS[fups] || 5; }
+
+/* one-click follow-up: increment count, push next due date, snap timing */
+function logFollowup(id){
+  const l = state.leads.find(x=>x.id===id); if(!l) return;
+  const max = PHASES[l.phase].maxFup;
+  if((l.fups||0)>=max) return;
+  l.account = leadAccount(l);              // stamp which account sent this follow-up
+  l.fups = (l.fups||0)+1;
+  // intent follows INTENT_GAPS (1/3/5d), engaged/booked stay at 2d
+  const spacingDays = l.phase==='intent' ? intentGap(l.fups) : 2;
+  const d = new Date(); d.setDate(d.getDate()+spacingDays);
+  l.due = d.toISOString().slice(0,10);
+  if(l.fups>=max) l.due = ''; // exhausted, clear queue
+  saveState(); renderAll();
+}
+
+/* ---------- LEAD LIST TABLE ---------- */
+function renderTable(){
+  const body = document.getElementById('leadBody');
+  const vis = visibleLeads();
+  document.getElementById('cntAll').textContent = vis.length;
+  if(vis.length===0){ body.innerHTML = `<tr><td colspan="8" class="empty">No leads yet${state.activeAccount&&state.activeAccount!=='all'?' for @'+esc(state.activeAccount):''}.</td></tr>`; return; }
+  let html='';
+  vis.slice().sort((a,b)=>(a.due||'zzz')<(b.due||'zzz')?-1:1).forEach(l=>{
+    html += `<tr class="row">
+      <td><span class="statusdot"><span class="sd" style="background:${PHASES[l.phase].color}"></span>${PHASES[l.phase].label}</span></td>
+      <td><b>${esc(l.name||'—')}</b>${l.username?`<div style="font-family:'Space Mono';font-size:10px;color:var(--signal)">@${esc(l.username)}</div>`:''}${!(l.flags&&l.flags.approached)&&l.phase!=='dead'?`<div style="font-family:'Space Mono';font-size:9px;color:var(--bad)">⚠ initial not sent</div>`:''}</td>
+      <td><span class="plat">${l.platform}</span></td>
+      <td>${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">open ↗</a>`:'<span style="color:var(--muted)">—</span>'}</td>
+      <td><span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></td>
+      <td style="font-family:'Space Mono';font-size:12px">${l.fups||0}/${PHASES[l.phase].maxFup}</td>
+      <td>${l.due?dueBadge(l)||l.due.slice(5):'<span style="color:var(--muted)">—</span>'}</td>
+      <td><button class="btn ghost sm" onclick="openLead('${l.id}')">Edit</button></td>
+    </tr>`;
+  });
+  body.innerHTML = html;
+}
+
+/* ---------- MODAL ---------- */
+function openLead(id){
+  editingId = id || null;
+  const l = id ? state.leads.find(x=>x.id===id) : null;
+  document.getElementById('modalTitle').textContent = l?'Edit Lead':'New Lead';
+  document.getElementById('delBtn').style.display = l?'inline-block':'none';
+  document.getElementById('f-name').value = l?.name||'';
+  document.getElementById('f-plat').value = l?.platform||'Instagram';
+  document.getElementById('f-username').value = l?.username||'';
+  document.getElementById('f-link').value = l?.link||'';
+  document.getElementById('f-fups').value = l?.fups||0;
+  document.getElementById('f-due').value = l?.due||'';
+  document.getElementById('f-lang').value = (l?.lang==='nl'||l?.lang==='en') ? l.lang : '';
+  document.getElementById('f-variant').value = l?.variant||'';
+  document.getElementById('f-account').innerHTML = accounts().map(a=>`<option value="${esc(a)}">@${esc(a)}</option>`).join('');
+  const defAcct = l ? leadAccount(l) : ((state.activeAccount&&state.activeAccount!=='all')?state.activeAccount:accounts()[0]);
+  document.getElementById('f-account').value = defAcct;
+  document.getElementById('f-notes').value = l?.notes||'';
+  modalPhase = l?.phase||'intent';
+  modalFlags = Object.assign({approached:true}, l?.flags||{});
+  setPhase(modalPhase, true);
+  renderFlags();
+  document.getElementById('scrim').classList.add('show');
+}
+function closeLead(){ document.getElementById('scrim').classList.remove('show'); editingId=null; }
+function setPhase(ph, silent){
+  modalPhase = ph;
+  document.querySelectorAll('.step').forEach(s=>s.classList.toggle('on', s.dataset.ph===ph));
+  document.getElementById('lblFups').textContent = `Follow-ups sent (max ${PHASES[ph].maxFup})`;
+  // sensible flag defaults when promoting phase
+  if(!silent){
+    if(ph==='engaged'){ modalFlags.seen=true; modalFlags.positive=true; }
+    if(ph==='booked'){ modalFlags.seen=true; modalFlags.positive=true; modalFlags.booksent=true; modalFlags.booked=true; }
+    renderFlags();
+  }
+}
+function renderFlags(){
+  const row = document.getElementById('flagRow');
+  row.innerHTML = FLAGS.map(f=>{
+    const on = !!modalFlags[f.key];
+    return `<button class="btn ${on?'sig':'ghost'} sm" onclick="toggleFlag('${f.key}')">${on?'✓ ':''}${f.label}</button>`;
+  }).join('');
+}
+function toggleFlag(k){ modalFlags[k]=!modalFlags[k]; renderFlags(); }
+
+function saveLead(){
+  const name = document.getElementById('f-name').value.trim();
+  const lead = {
+    id: editingId || ('L'+Date.now()+Math.random().toString(36).slice(2,6)),
+    name,
+    username: document.getElementById('f-username').value.trim().replace(/^@/,''),
+    platform: document.getElementById('f-plat').value,
+    link: document.getElementById('f-link').value.trim(),
+    phase: modalPhase,
+    fups: Math.max(0, parseInt(document.getElementById('f-fups').value)||0),
+    due: document.getElementById('f-due').value,
+    notes: document.getElementById('f-notes').value.trim(),
+    flags: modalFlags
+  };
+  const chosenLang = document.getElementById('f-lang').value;        // '' | nl | en
+  const chosenVar  = document.getElementById('f-variant').value;     // '' | A | B | C
+  const chosenAcct = document.getElementById('f-account').value;     // sending account
+  if(chosenLang) lead.lang = chosenLang; else delete lead.lang;
+  if(chosenAcct) lead.account = chosenAcct;
+  deriveIg(lead);
+  if(modalPhase==='dead') lead.due='';
+  if(editingId){
+    const i = state.leads.findIndex(x=>x.id===editingId);
+    const prev = state.leads[i];
+    lead._setter = prev._setter || targetSetter();
+    lead.approachDate = prev.approachDate || todayISO();
+    ['seenDate','positiveDate','booksentDate','bookedDate'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
+    lead.variant = chosenVar || prev.variant || assignVariant();
+    stampFlagDates(lead);
+    state.leads[i]=lead;
+  }else{
+    lead._setter = targetSetter();
+    lead.approachDate = todayISO();
+    lead.variant = chosenVar || assignVariant();
+    stampFlagDates(lead);
+    state.leads.push(lead);
+  }
+  saveState(); closeLead(); renderAll();
+}
+function deleteLead(){
+  if(!editingId) return;
+  state.leads = state.leads.filter(x=>x.id!==editingId);
+  saveState(); closeLead(); renderAll();
+}
+
+/* ---------- SCRIPTS (bilingual NL / EN) ---------- */
+function curScripts(){
+  if(!state.scripts[state.lang]) state.scripts[state.lang]={};
+  return state.scripts[state.lang];
+}
+/* ---- build the individual follow-up blocks (one follow-up per block + optional GIF) ---- */
+function escAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function gifFieldHTML(key){
+  return `<div class="gifrow"><span class="gico">🎞️</span>
+    <input class="gifinput" data-gif="${key}" placeholder="GIF-URL (Giphy/Tenor) — optional"></div>
+    <div class="gifprev" data-gifprev="${key}"></div>`;
+}
+function blockHTML(label,key,nl,en,gif){
+  return `<div class="fupblock">
+    <span class="tag">${label}</span>
+    <textarea data-script="${key}" data-ph-nl="${escAttr(nl)}" data-ph-en="${escAttr(en)}"></textarea>
+    ${gif?gifFieldHTML(key):''}
+  </div>`;
+}
+function buildScriptBlocks(){
+  const initDefaults = {
+    A:["Hey {{first.name}}, kwam je profiel tegen — ziet er top uit wat je doet. Ik wil je iets pitchen om meer klanten te krijgen, maar ik haat pitchen zonder toestemming. Stuur een 👍 en ik stuur het door.",
+       "Hey {{first.name}}, came across your profile — looks great what you're doing. I'd love to pitch you something to get you more clients, but I hate pitching without permission. Drop me a 👍 and I'll send it over."],
+    B:["Hey {{first.name}}! Snelle vraag — sta je open voor 1 idee waarmee je er deze maand een paar klanten bij kunt krijgen? Geen verkooppraatje, gewoon 👍 en ik stuur 't.",
+       "Hey {{first.name}}! Quick one — open to one idea that could land you a few extra clients this month? No sales pitch, just 👍 and I'll send it."],
+    C:["{{first.name}}, ik help mensen zoals jij aan meer klanten. Mag ik je er 1 voorbeeld van sturen? Reageer met 👍.",
+       "{{first.name}}, I help people like you get more clients. Mind if I send you one example? Reply 👍."]
+  };
+  let initHtml = `<div class="meta">First DM — most important stimulus. Get a 👍 before pitching. <code>{{first.name}}</code> = the lead's name.</div>`;
+  activeVariants().forEach(v=>{
+    const d = initDefaults[v]||["",""];
+    initHtml += `<div class="vedithead">Variant ${v}</div>` + blockHTML('Initial message · variant '+v, initialKey(v), d[0], d[1], true);
+  });
+  document.getElementById('initialBlock').innerHTML = initHtml;
+  // INTENT
+  let h='';
+  h+=blockHTML('FUP 1','ifup1',"{{first.name}} 👀","{{first.name}} 👀",true);
+  h+=blockHTML('FUP 2','ifup2',"Nog steeds benieuwd of dit interessant voor je is — 30 seconden waard?","Still keen to show you this — worth 30 seconds?",true);
+  h+=blockHTML('FUP 3','ifup3',"Laatste reminder van mij — zal ik het sturen of niet?","Last nudge from me — want me to send it or no?",true);
+  h+=blockHTML('Negative reply response','neg',"Helemaal goed — fijne dag nog!","No worries at all — have a great one!",false);
+  document.getElementById('intentFups').innerHTML=h;
+  // ENGAGED
+  h=blockHTML('Evergreen VSL / video','vsl',"[loom link] — houd 'm onder 2,5 min.","[loom link] — keep under 2.5 min.",true);
+  const eDef={1:["Heb je de video kunnen bekijken?","Did you get a chance to watch?"],2:["{{first.name}} 👀","{{first.name}} 👀"]};
+  for(let i=1;i<=8;i++){ const d=eDef[i]||["",""]; h+=blockHTML('E-FUP '+i,'efup'+i,d[0],d[1],true); }
+  document.getElementById('engagedFups').innerHTML=h;
+  // BOOKED
+  h=blockHTML('Booking message','booking',"Top — kies een moment dat jou uitkomt: [booking link]","Perfect — grab any slot that works: [booking link]",true);
+  const bDef={1:["Hier de link nog een keer: [booking link]","Here's the link again: [booking link]"],2:["Zullen we een moment inplannen?","Still want to lock in a time?"]};
+  for(let i=1;i<=8;i++){ const d=bDef[i]||["",""]; h+=blockHTML('B-FUP '+i,'bfup'+i,d[0],d[1],true); }
+  document.getElementById('bookedFups').innerHTML=h;
+}
+function flashSaved(key){
+  if(key!=='initial') return;
+  const n=document.getElementById('sv-initial'); if(!n) return;
+  n.classList.add('show'); setTimeout(()=>n.classList.remove('show'),1200);
+}
+function renderGifPrev(key){
+  const box=document.querySelector('[data-gifprev="'+key+'"]'); if(!box) return;
+  const url=(curScripts()['gif_'+key]||'').trim();
+  box.innerHTML = url ? '<img src="'+esc(url)+'" alt="gif preview">' : '';
+}
+function bindScripts(){
+  buildScriptBlocks();
+  document.querySelectorAll('[data-script]').forEach(t=>{
+    const key=t.dataset.script;
+    let timer;
+    t.addEventListener('input',()=>{
+      curScripts()[key]=t.value;
+      clearTimeout(timer);
+      timer=setTimeout(()=>{ saveState(); flashSaved(key); renderDue(); },500);
+    });
+  });
+  document.querySelectorAll('[data-gif]').forEach(inp=>{
+    const key=inp.dataset.gif;
+    let timer;
+    inp.addEventListener('input',()=>{
+      curScripts()['gif_'+key]=inp.value.trim();
+      renderGifPrev(key);
+      clearTimeout(timer);
+      timer=setTimeout(()=>{ saveState(); renderDue(); },500);
+    });
+  });
+  loadScriptValues();
+}
+/* fill textareas + gif inputs from the active language + swap placeholders */
+function loadScriptValues(){
+  const s = curScripts();
+  document.querySelectorAll('[data-script]').forEach(t=>{
+    const key=t.dataset.script;
+    t.value = s[key]||'';
+    const ph = t.getAttribute('data-ph-'+state.lang);
+    if(ph!==null) t.placeholder = ph;
+  });
+  document.querySelectorAll('[data-gif]').forEach(inp=>{
+    const key=inp.dataset.gif;
+    inp.value = s['gif_'+key]||'';
+    renderGifPrev(key);
+  });
+}
+function setLang(l){
+  state.lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));
+  loadScriptValues();
+  saveState();
+  renderAll(); // queue/pipeline scripts follow the active language
+}
+
+/* ---------- PLAYBOOK static ---------- */
+function renderPlaybook(){
+  document.getElementById('rulesWrap').innerHTML = RULES.map(r=>
+    `<div class="tool"><div><div class="tn">${r[0]}</div><div class="td">${r[1]}</div></div></div>`).join('');
+  document.getElementById('toolsWrap').innerHTML = TOOLS.map(t=>
+    `<div class="tool"><div><div class="tn">${t[0]}</div><div class="td">${t[1]}</div></div><div class="tu">${t[2]}</div></div>`).join('');
+}
+
+/* ---------- GOAL ---------- */
+function editGoal(){
+  const v = prompt('Daily approach target (volume is the game):', state.goal);
+  if(v && !isNaN(v)){ state.goal=parseInt(v); saveState(); renderMetrics(); }
+}
+
+/* ---------- IMPORT ENGINE ---------- */
+let importStaged = [];
+
+function openImport(){
+  document.getElementById('imp-text').value='';
+  document.getElementById('csvName').textContent='';
+  document.getElementById('impPreview').innerHTML='';
+  document.getElementById('impMap').innerHTML='';
+  importStaged=[]; importMatrix=[]; importHeader=null; importMap={name:0,username:-1,link:-1,phase:-1,lang:-1};
+  impAccount = (state.activeAccount && state.activeAccount!=='all') ? state.activeAccount : accounts()[0];
+  renderImpAcctToggle();
+  setImpLang(impDefLang);
+  updateImpCount();
+  impTab('paste');
+  document.getElementById('impScrim').classList.add('show');
+}
+function closeImport(){ document.getElementById('impScrim').classList.remove('show'); }
+function impTab(t){
+  document.querySelectorAll('.imp-tab').forEach(b=>b.classList.toggle('active',b.dataset.imp===t));
+  document.querySelectorAll('.imp-pane').forEach(p=>p.classList.toggle('show',p.id==='imp-'+t));
+}
+
+const PLAT_ALIASES = {ig:'Instagram',insta:'Instagram',instagram:'Instagram'};
+const PHASE_ALIASES = {intent:'intent',cold:'intent',engaged:'engaged',interested:'engaged',
+  booked:'booked',dead:'dead',no:'dead'};
+const LANG_ALIASES = {nl:'nl',dutch:'nl',nederlands:'nl',ned:'nl',du:'nl',
+  en:'en',english:'en',eng:'en',engels:'en'};
+function normLang(s){ if(!s) return ''; return LANG_ALIASES[s.toLowerCase().replace(/[^a-z]/g,'')]||''; }
+
+let impDefLang = 'nl';   // default language picked in the import modal
+function setImpLang(l){
+  impDefLang = (l==='en')?'en':'nl';
+  document.querySelectorAll('[data-implang]').forEach(b=>b.classList.toggle('active', b.dataset.implang===impDefLang));
+  applyMapping();
+}
+let impAccount = '';     // account these imported leads belong to
+function renderImpAcctToggle(){
+  const box=document.getElementById('impAcctToggle'); if(!box) return;
+  box.innerHTML = accounts().map(a=>`<button class="lang-btn ${impAccount===a?'active':''}" onclick="setImpAccount('${esc(a)}')">@${esc(a)}</button>`).join('');
+}
+function setImpAccount(a){
+  impAccount = a;
+  renderImpAcctToggle();
+  applyMapping();
+}
+
+function normPlat(s){ if(!s) return null; const k=s.toLowerCase().replace(/[^a-z]/g,''); return PLAT_ALIASES[k]||null; }
+function looksEmail(s){ return /@/.test(s); }
+function looksLink(s){ return /\.(com|net|io|nl|co|org)/i.test(s) || s.includes('/'); }
+
+/* ---- column model: parse raw text into a matrix, auto-detect mapping, allow override ---- */
+let importMatrix = [];   // rows of cells (data rows only, header stripped)
+let importHeader = null; // array of header labels, or null
+let importMap = {name:0, username:-1, link:-1, phase:-1};
+
+const HEADER_WORDS = ['name','naam','first','voornaam','contact','full','user','username','handle','gebruikersnaam',
+  'link','url','profile','profiel','insta','instagram','account','ig','phase','stage','status','fase','email','mail',
+  'language','taal','lang'];
+
+/* pull a clean IG handle out of a link or @handle */
+function igHandle(s){
+  if(!s) return '';
+  let h = s.trim();
+  const m = h.match(/instagram\.com\/([^/?#\s]+)/i);
+  if(m) h = m[1];
+  return h.replace(/^@/,'').replace(/\/+$/,'').trim();
+}
+/* fill in whichever of username / link is missing from the other */
+function deriveIg(rec){
+  if(rec.username) rec.username = rec.username.replace(/^@/,'').trim();
+  if(!rec.username && rec.link) rec.username = igHandle(rec.link);
+  if(!rec.link && rec.username) rec.link = 'https://instagram.com/'+rec.username;
+  return rec;
+}
+
+/* parse pasted text → matrix (no header assumed) */
+function parsePaste(){
+  importMatrix = document.getElementById('imp-text').value
+    .split('\n').map(l=>l.trim()).filter(Boolean)
+    .map(line=> line.split(/\t|,/).map(c=>c.trim()));
+  importHeader = null;
+  autoGuessMap(); renderMapping(); applyMapping();
+}
+
+/* parse a CSV/TSV file → matrix + header detection */
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length){ importMatrix=[]; importHeader=null; importStaged=[]; renderMapping(); showPreview(); return; }
+  const delim = lines[0].includes('\t') ? '\t' : ',';
+  const split = l => { // basic CSV with quote support
+    const out=[]; let cur='',q=false;
+    for(const ch of l){ if(ch==='"'){q=!q;} else if(ch===delim&&!q){out.push(cur);cur='';} else cur+=ch; }
+    out.push(cur); return out.map(s=>s.trim().replace(/^"|"$/g,''));
+  };
+  const matrix = lines.map(split);
+  const first = matrix[0].map(h=>h.toLowerCase());
+  const hasHeader = first.some(h=> HEADER_WORDS.some(w=>h.includes(w)));
+  if(hasHeader){ importHeader = matrix[0]; importMatrix = matrix.slice(1); }
+  else { importHeader = null; importMatrix = matrix; }
+  autoGuessMap(); renderMapping(); applyMapping();
+}
+
+function colCount(){ return importMatrix.length ? Math.max(...importMatrix.map(r=>r.length)) : 0; }
+
+/* the app "thinks first" — guess which column is name / link / phase */
+function autoGuessMap(){
+  const cols = colCount();
+  const h = importHeader;
+  const byHeader = (names)=> h ? h.findIndex(x=> names.some(n=> x.toLowerCase().includes(n))) : -1;
+  let name  = byHeader(['name','naam','voornaam','first','contact','full']);
+  let user  = byHeader(['username','handle','gebruikersnaam','user','account','ig']);
+  let link  = byHeader(['link','url','profile','profiel','instagram','insta']);
+  let phase = byHeader(['phase','stage','status','fase']);
+  let lang  = byHeader(['language','taal','lang']);
+  const looksHandle = v => v && !/\s/.test(v) && (/^@/.test(v) || (!looksLink(v) && /^[a-z0-9._]+$/i.test(v)));
+  // content fallbacks when no header match
+  if(link<0){ for(let c=0;c<cols;c++){ if(c===name||c===user) continue; if(importMatrix.some(r=>looksLink(r[c]||''))){ link=c; break; } } }
+  if(user<0){ for(let c=0;c<cols;c++){ if(c===name||c===link) continue; if(importMatrix.some(r=>looksHandle((r[c]||'').trim()))){ user=c; break; } } }
+  if(name<0){ // first column that isn't link/username and reads like a name (has spaces or letters)
+    for(let c=0;c<cols;c++){ if(c===link||c===user) continue; if(!importMatrix.every(r=>looksLink(r[c]||''))){ name=c; break; } }
+    if(name<0) name=0;
+  }
+  // content fallback for language: a column whose values read as nl/en
+  if(lang<0){ for(let c=0;c<cols;c++){ if(c===name||c===user||c===link||c===phase) continue; if(importMatrix.some(r=>normLang(r[c]||''))){ lang=c; break; } } }
+  importMap = {name, username:user, link, phase, lang};
+}
+
+function colLabel(c){
+  const head = (importHeader && importHeader[c]) ? importHeader[c] : 'Column '+(c+1);
+  const sample = importMatrix.slice(0,2).map(r=>(r[c]||'').trim()).filter(Boolean).join(', ').slice(0,26);
+  return head + (sample? ' — '+sample : '');
+}
+
+/* render the auto-detected mapping + override dropdowns */
+function renderMapping(){
+  const box = document.getElementById('impMap');
+  const cols = colCount();
+  if(!cols){ box.innerHTML=''; return; }
+  const opt = (sel, allowNone)=>{
+    let o = allowNone ? `<option value="-1"${sel===-1?' selected':''}>— none —</option>` : '';
+    for(let c=0;c<cols;c++) o += `<option value="${c}"${sel===c?' selected':''}>${esc(colLabel(c))}</option>`;
+    return o;
+  };
+  box.innerHTML = `<div class="imp-prev-h">Detected columns ${importHeader?'· header found':'· no header — guessed from content'} — fix any below</div>
+    <div class="mapgrid">
+      <label class="f">Name<select class="f mapsel" data-map="name">${opt(importMap.name,false)}</select></label>
+      <label class="f">Username (IG handle)<select class="f mapsel" data-map="username">${opt(importMap.username,true)}</select></label>
+      <label class="f">Instagram link<select class="f mapsel" data-map="link">${opt(importMap.link,true)}</select></label>
+      <label class="f">Phase (optional)<select class="f mapsel" data-map="phase">${opt(importMap.phase,true)}</select></label>
+      <label class="f">Language (optional)<select class="f mapsel" data-map="lang">${opt(importMap.lang,true)}</select></label>
+    </div>
+    <div class="mapnote">Auto-detected. Wrong? Pick the right column. Link/Phase/Language can be “none” — leads with no language fall back to the default above (and you can flip NL/EN per lead later).</div>`;
+  box.querySelectorAll('.mapsel').forEach(s=> s.addEventListener('change', ()=>{
+    importMap[s.dataset.map] = parseInt(s.value); applyMapping();
+  }));
+}
+
+/* flags for an imported lead — intent/dead start NOT approached (initial still to send) */
+function phaseFlags(phase){
+  if(phase==='engaged') return {approached:true, seen:true, positive:true};
+  if(phase==='booked')  return {approached:true, seen:true, positive:true, booksent:true, booked:true};
+  return {}; // intent / dead → first DM not sent yet
+}
+
+/* already in the system for THIS account? (match name / username / link) → skipped on import.
+   Per-account: the same person can still be a target under a different account. */
+function isDup(r){
+  const acct = r.account||impAccount||accounts()[0];
+  return state.leads.some(l=> leadAccount(l)===acct && (
+    (l.name&&r.name&&l.name.toLowerCase()===r.name.toLowerCase()) ||
+    (l.link&&r.link&&l.link===r.link) ||
+    (l.username&&r.username&&l.username.toLowerCase()===r.username.toLowerCase())));
+}
+
+/* build staged leads from the matrix + current mapping */
+function applyMapping(){
+  importStaged = importMatrix.map(r=>{
+    const name = (r[importMap.name]||'').trim();
+    const username = importMap.username>=0 ? (r[importMap.username]||'').trim() : '';
+    const link = importMap.link>=0 ? (r[importMap.link]||'').trim() : '';
+    let phase = 'intent';
+    if(importMap.phase>=0){ const p = PHASE_ALIASES[(r[importMap.phase]||'').toLowerCase()]; if(p) phase=p; }
+    const lang = (importMap.lang>=0 ? normLang(r[importMap.lang]||'') : '') || impDefLang;
+    return deriveIg({name, username, platform:'Instagram', link, phase, lang, account:impAccount||accounts()[0], flags:phaseFlags(phase)});
+  }).filter(r=>r.name);
+  showPreview();
+}
+
+function showPreview(){
+  const box = document.getElementById('impPreview');
+  updateImpCount();
+  if(!importStaged.length){ box.innerHTML=''; return; }
+  const dupes = importStaged.filter(isDup).length;
+  let html = `<div class="imp-prev-h">Preview — first ${Math.min(6,importStaged.length)} of ${importStaged.length}${dupes?` · <span style="color:var(--warn)">${dupes} already exist (will be skipped)</span>`:''}</div>`;
+  html += '<div class="imp-prev">';
+  importStaged.slice(0,6).forEach(r=>{
+    html += `<div class="imp-prow"><b>${esc(r.name)}</b>
+      ${r.username?`<span style="font-family:'Space Mono';font-size:10px;color:var(--signal)">@${esc(r.username)}</span>`:''}
+      <span class="plat" style="border-color:${PHASES[r.phase].color};color:${PHASES[r.phase].color}">${PHASES[r.phase].label}</span>
+      <span class="plat">${r.lang==='en'?'🇬🇧 EN':'🇳🇱 NL'}</span>
+      ${r.link?`<span style="font-family:'Space Mono';font-size:9px;color:var(--muted)">${esc(r.link).slice(0,28)}</span>`:''}</div>`;
+  });
+  html += '</div>';
+  box.innerHTML = html;
+}
+function updateImpCount(){
+  const total = importStaged.length;
+  const n = importStaged.filter(r=>!isDup(r)).length;   // new (non-duplicate) leads
+  const skip = total - n;
+  document.getElementById('impCount').textContent =
+    n+' new lead'+(n===1?'':'s')+' ready'+(skip?` · ${skip} already exist (skipped)`:'');
+  document.getElementById('impBtn').disabled = n===0;
+}
+
+function runImport(){
+  const today = todayISO();
+  let added=0, skipped=0;
+  importStaged.forEach(r=>{
+    if(isDup(r)){ skipped++; return; }   // already in system (maybe already worked) → leave untouched
+    const approached = !!(r.flags && r.flags.approached);
+    const lead = {id:'L'+Date.now()+Math.random().toString(36).slice(2,6),
+      name:r.name, username:r.username||'', platform:'Instagram', link:r.link, phase:r.phase,
+      lang:(r.lang==='en'||r.lang==='nl')?r.lang:undefined, variant:assignVariant(),
+      account:r.account||impAccount||accounts()[0], _setter:targetSetter(),
+      fups:0, due:'', notes:'', flags:r.flags||{}};
+    if(lead.lang===undefined) delete lead.lang;
+    if(approached){ lead.approachDate=today; if(r.phase==='engaged') lead.due=today; }
+    stampFlagDates(lead);
+    state.leads.push(lead); added++;
+  });
+  if(impAccount) state.activeAccount = impAccount;   // jump to the account you just imported into
+  saveState(); closeImport(); renderAll();
+  // land on the Initial Outreach tab if there are first DMs to send, else the queue
+  const toSend = visibleLeads().some(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached));
+  switchView(toSend ? 'send' : 'today');
+  setTimeout(()=>alert(`Imported ${added} new lead${added===1?'':'s'}`+(skipped?`, skipped ${skipped} that already exist`:'')+`.\nNew leads are in "Initial Outreach" — send their first DM, then mark it sent.`),100);
+}
+
+/* ---------- MIGRATE old localStorage dmps-state ---------- */
+function runMigrate(){
+  const msg = document.getElementById('migMsg'); msg.className='authmsg';
+  let old;
+  try{ old = JSON.parse(document.getElementById('mig-text').value.trim()); }
+  catch(e){ msg.textContent = 'Geen geldige JSON — plak exact wat het console-commando op je klembord zette.'; return; }
+  if(!old || !Array.isArray(old.leads)){ msg.textContent = 'JSON mist een "leads" lijst — is dit wel dmps-state?'; return; }
+  const sid = targetSetter();
+  const existing = new Set(state.leads.map(l=>l.id));
+  let added=0, skipped=0;
+  old.leads.forEach(l=>{
+    if(!l || !l.id){ skipped++; return; }
+    if(existing.has(l.id) || isDup(l)){ skipped++; return; }
+    l._setter = sid;
+    state.leads.push(l); added++;
+  });
+  // scripts/goal: only take over if the cloud is still empty (don't clobber team scripts)
+  const cloudScriptCount = Object.keys(state.scripts.nl||{}).length + Object.keys(state.scripts.en||{}).length;
+  let tookScripts = false;
+  if(old.scripts && cloudScriptCount===0){
+    state.scripts = old.scripts;
+    if(!state.scripts.nl) state.scripts.nl={};
+    if(!state.scripts.en) state.scripts.en={};
+    tookScripts = true;
+  }
+  if(old.goal && state.goal===30) state.goal = old.goal;
+  if(old.abVariants && old.abVariants.length) state.abVariants = old.abVariants;
+  if(old.accounts && old.accounts.length) state.accounts = old.accounts;
+  saveState();
+  bindScripts(); renderAll();
+  msg.className='authmsg ok';
+  msg.textContent = `✓ ${added} leads gemigreerd${skipped?`, ${skipped} overgeslagen (bestonden al)`:''}${tookScripts?' · scripts overgenomen':''}.`;
+}
+
+/* wire up the paste box + file input */
+function wireImport(){
+  document.getElementById('imp-text').addEventListener('input', parsePaste);
+  document.getElementById('imp-defplat').addEventListener('change', parsePaste);
+  const fi = document.getElementById('csvFile');
+  fi.addEventListener('change', e=>{
+    const f=e.target.files[0]; if(!f) return;
+    document.getElementById('csvName').textContent=f.name;
+    const r=new FileReader(); r.onload=()=>parseCSV(r.result); r.readAsText(f);
+  });
+  const dz=document.getElementById('dropZone');
+  ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');}));
+  dz.addEventListener('drop',e=>{
+    const f=e.dataTransfer.files[0]; if(!f) return;
+    document.getElementById('csvName').textContent=f.name;
+    const r=new FileReader(); r.onload=()=>parseCSV(r.result); r.readAsText(f);
+  });
+}
+
+/* ---------- DEMO SEED ---------- */
+function seedDemo(){
+  alert('Demo-data staat uit in de cloud-versie — importeer echte leads via ⇪ Import.');
+  return;
+  // eslint-disable-next-line no-unreachable
+  const names=['Max','Sanne','Tom','Lisa','Daan','Eva','Niels','Femke','Bram','Noa','Sven','Iris','Lars','Anouk','Joost'];
+  const addDays=(iso,n)=>{ const d=new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  state.leads=[];
+  const vs = activeVariants();
+  const accts = accounts();
+  for(let i=0;i<90;i++){
+    const r=Math.random();
+    const variant = vs[i % vs.length];                        // even split across variants
+    const account = accts[i % accts.length];                  // even split across your accounts
+    const lang = Math.random()<0.55 ? 'nl' : 'en';            // mixed NL/EN demo
+    const vbias = variant==='B' ? 0.05 : (variant==='C' ? -0.02 : 0); // B replies a touch better
+    let phase='intent', flags={approached:true}, fups=0, due='';
+    // approached at some point in the last 90 days — spreads leads across the range tabs
+    const approachDate = addDays(todayISO(), -Math.floor(Math.random()*90));
+    const dates = {approachDate};
+    flags.seen = Math.random()<0.62;          // ~MSR 60%
+    if(flags.seen) dates.seenDate = addDays(approachDate, Math.floor(Math.random()*3));
+    if(r<0.45){ phase='dead'; }
+    else if(flags.seen && Math.random()<(0.10+vbias)){ flags.positive=true; phase='engaged'; fups=Math.floor(Math.random()*4);
+      dates.positiveDate = addDays(dates.seenDate||approachDate, Math.floor(Math.random()*4));
+      if(Math.random()<0.5){ flags.booksent=true; dates.booksentDate=addDays(dates.positiveDate, Math.floor(Math.random()*3));
+        if(Math.random()<0.6){ flags.booked=true; phase='booked'; dates.bookedDate=addDays(dates.booksentDate, Math.floor(Math.random()*5)); } }
+    }
+    const d=new Date(); d.setDate(d.getDate()+Math.floor(Math.random()*6)-2);
+    if(phase==='intent'||phase==='engaged'){ due=d.toISOString().slice(0,10); fups=fups||Math.floor(Math.random()*PHASES[phase].maxFup); }
+    state.leads.push(Object.assign({id:'L'+i+Date.now(),name:names[i%names.length]+' '+(Math.floor(i/names.length)+1),
+      platform:'Instagram',link:'',phase,fups,due,notes:'',variant,lang,account,flags}, dates));
+  }
+  saveState(); renderAll(); switchView('dash');
+}
+
+/* ---------- util ---------- */
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- A/B TESTS view ---------- */
+const AB_MINSAMPLE = 20;
+function rangeLabel(){ return {'7':'last 7 days','30':'last 30 days','90':'last 90 days'}[activeRange] || (activeRange==='all'?'all time':'custom range'); }
+function renderAB(){
+  const box = document.getElementById('abBody'); if(!box) return;
+  const vs = activeVariants();
+  if(vs.length<2){
+    box.innerHTML = `<div class="abverdict">A/B testing is <b>off</b> — only Variant A is in rotation. Switch on <b>A/B</b> or <b>A/B/C</b> in the <a class="link" style="cursor:pointer" onclick="switchView('scripts')">Scripts &amp; Chain tab</a> to start comparing initial messages.</div>`;
+    return;
+  }
+  const stat = vs.map(v=>({
+    v, appr:countV('approached',v), seen:countV('seen',v), pos:countV('positive',v),
+    bs:countV('booksent',v), bk:countV('booked',v),
+    msr:ratioV('seen','approached',v), prr:ratioV('positive','approached',v),
+    bsr:ratioV('booksent','approached',v), abr:ratioV('booked','approached',v)
+  }));
+  const eligible = stat.filter(s=>s.appr>=AB_MINSAMPLE);
+  let leader=null; eligible.forEach(s=>{ if(!leader || s.prr>leader.prr) leader=s; });
+
+  // verdict
+  let verdict='';
+  const totalAppr = stat.reduce((a,s)=>a+s.appr,0);
+  if(!eligible.length){
+    verdict = `<div class="abverdict">Collecting data — <b>${totalAppr}</b> lead${totalAppr===1?'':'s'} approached across ${vs.length} variants in the ${rangeLabel()}. Need ≥${AB_MINSAMPLE} per variant before calling a winner. Keep the rotation running and don't touch the messages yet — <b>data don't lie, but only with volume.</b></div>`;
+  } else if(leader){
+    const rest = eligible.filter(s=>s.v!==leader.v).sort((a,b)=>b.prr-a.prr);
+    if(rest.length){
+      const r = rest[0];
+      const conf = propConfidence(leader.pos,leader.appr,r.pos,r.appr)*100;
+      const lift = r.prr>0 ? ((leader.prr-r.prr)/r.prr*100) : 100;
+      if(conf>=95)
+        verdict = `<div class="abverdict">✓ <b>Variant ${leader.v} wins.</b> ${fmtPct(leader.prr)} positive-reply rate vs ${fmtPct(r.prr)} for ${r.v} — a ${lift.toFixed(0)}% lift at ~${conf.toFixed(0)}% confidence. <b>Make ${leader.v} the new default</b> and start the next test.</div>`;
+      else
+        verdict = `<div class="abverdict"><b>Variant ${leader.v} leads</b> at ${fmtPct(leader.prr)} PRR vs ${fmtPct(r.prr)} (${r.v}) — but only ~${conf.toFixed(0)}% confidence, not conclusive. Keep sending before you switch.</div>`;
+    } else {
+      verdict = `<div class="abverdict"><b>Variant ${leader.v}</b> has enough data (${leader.appr} approached); the other variant(s) don't yet. Keep the rotation balanced.</div>`;
+    }
+  }
+
+  // cards
+  let cards = '<div class="abgrid">';
+  stat.forEach(s=>{
+    const iv = initialScript(s.v);   // shown in toolbar language
+    const win = leader && s.v===leader.v;
+    const need = s.appr<AB_MINSAMPLE ? `${AB_MINSAMPLE-s.appr} more for significance` : 'enough data';
+    cards += `<div class="abcard ${win?'win':''}">
+      <h4><span class="vbadge ${s.v}">${s.v}</span> Variant ${s.v}</h4>
+      <div class="abn">${s.appr} approached · ${need}</div>
+      <div class="abmsg">${iv.text?esc(iv.text):'<span style="color:var(--muted)">No message set — add it in Scripts.</span>'}</div>
+      <div class="abstat"><span class="k">Positive reply · PRR</span><span class="v primary">${s.appr?fmtPct(s.prr):'—'}</span></div>
+      <div class="abstat"><span class="k">Media seen · MSR</span><span class="v">${s.appr?fmtPct(s.msr):'—'}</span></div>
+      <div class="abstat"><span class="k">Booking sent · BSR</span><span class="v">${s.appr?fmtPct(s.bsr):'—'}</span></div>
+      <div class="abstat"><span class="k">Booked · ABR</span><span class="v">${s.appr?fmtPct(s.abr):'—'}</span></div>
+      <div class="abstat"><span class="k">Replied / sent</span><span class="v" style="font-size:11px">${s.pos} / ${s.appr}</span></div>
+    </div>`;
+  });
+  cards += '</div>';
+
+  const note = `<div class="abctrl" style="margin-top:14px">Window: <b style="color:var(--ink)">${rangeLabel()}</b> (set on the Dashboard) · winner judged on PRR = positive replies ÷ approached · ≥${AB_MINSAMPLE}/variant needed. Edit variants in the <a class="link" style="cursor:pointer" onclick="switchView('scripts')">Scripts tab</a>.</div>`;
+  box.innerHTML = verdict + cards + note;
+}
+
+/* turn A/B test on/off / set number of variants in rotation */
+function setAbVariants(n){
+  const all=['A','B','C'];
+  state.abVariants = all.slice(0, Math.max(1, Math.min(3, n)));
+  document.querySelectorAll('#abVarToggle .range-btn').forEach(b=>b.classList.toggle('active', parseInt(b.dataset.abn)===state.abVariants.length));
+  saveState();
+  bindScripts();   // rebuild the initial-message variant editors
+  renderAll();
+}
+
+/* ---------- render all ---------- */
+function renderAll(){ renderAccountSwitcher(); renderMetrics(); renderInsight(); renderFunnel(); renderTeam(); renderSend(); renderBoard(); renderDue(); renderTable(); renderAB(); }
+
+/* ---------- tabs ---------- */
+function switchView(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('show',s.id==='view-'+v));
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchView(t.dataset.view)));
+document.getElementById('scrim').addEventListener('click',e=>{ if(e.target.id==='scrim') closeLead(); });
+document.getElementById('impScrim').addEventListener('click',e=>{ if(e.target.id==='impScrim') closeImport(); });
+
+/* ---------- boot ---------- */
+let booted = false;
+async function startApp(){
+  if(booted) return; booted = true;
+  // fetch my profile (signup trigger can lag a beat)
+  for(let i=0;i<6 && !me;i++){
+    const {data:{user}} = await sb.auth.getUser();
+    if(!user) break;
+    const {data:p} = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if(p){ me = p; break; }
+    await new Promise(r=>setTimeout(r,700));
+  }
+  if(!me){
+    booted = false;
+    document.getElementById('authMsg').textContent = 'Profiel niet gevonden — probeer opnieuw.';
+    await sb.auth.signOut();
+    return;
+  }
+  document.getElementById('userName').textContent = me.name || me.email;
+  document.getElementById('userRole').textContent = me.role==='owner' ? 'OWNER' : 'SETTER';
+  if(me.role==='owner'){
+    const {data:t} = await sb.from('profiles').select('*').order('created_at');
+    team = t || [me];
+    document.getElementById('setterPill').style.display = 'flex';
+    renderSetterSwitcher();
+  } else { team = [me]; }
+  await loadCloud();
+  document.getElementById('authScrim').classList.remove('show');
+  initUI();
+  renderAll();
+}
+function initUI(){
+  document.getElementById('todayStr').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+  renderPlaybook();
+  bindScripts();
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===state.lang));
+  wireImport();
+  document.querySelectorAll('.range-btn').forEach(b=>b.addEventListener('click',()=>setRange(b.dataset.range)));
+  document.getElementById('rangeFrom').addEventListener('change',e=>{customFrom=e.target.value; if(activeRange==='custom'){renderMetrics();renderInsight();renderFunnel();renderAB();}});
+  document.getElementById('rangeTo').addEventListener('change',e=>{customTo=e.target.value; if(activeRange==='custom'){renderMetrics();renderInsight();renderFunnel();renderAB();}});
+  document.querySelectorAll('#abVarToggle .range-btn').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.dataset.abn)===activeVariants().length);
+    b.addEventListener('click',()=>setAbVariants(parseInt(b.dataset.abn)));
+  });
+  // pick up team changes when you come back to the tab (other setter worked meanwhile)
+  window.addEventListener('focus', async ()=>{
+    if(!me || syncing || syncTimer || Date.now()-lastLoad < 60000) return;
+    try{ await loadCloud(); loadScriptValues(); renderAll(); }catch(e){ console.error(e); }
+  });
+}
+(async function(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session){ startApp(); }
+  ['auth-pass','auth-email'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); }); });
+})();
+</script>
+</body>
+</html>
