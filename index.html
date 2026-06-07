@@ -421,8 +421,8 @@
     <div class="sec-sub">Nieuwe leads worden om-en-om verdeeld. Vergeleken op reactie → call voorgesteld → geboekt.</div>
     <div id="ftBody"></div>
 
-    <div class="sec-h" style="margin-top:34px">A/B-test — openingsbericht</div>
-    <div class="sec-sub">Elke nieuwe lead krijgt automatisch een variant (om-en-om). Winnaar op basis van positieve reacties.</div>
+    <div class="sec-h" style="margin-top:34px">A/B-test — openingsbericht (🎥 VSL-funnel)</div>
+    <div class="sec-sub">Loopt binnen de VSL-funnel: elke VSL-lead krijgt automatisch een variant (om-en-om). Winnaar op basis van positieve reacties. Zo test je je beste opening bínnen VSL, en de funnel-test hierboven beslist chat vs VSL.</div>
     <div id="abBody"></div>
   </section>
 
@@ -1031,7 +1031,8 @@ function assignVariant(){
   return best;
 }
 function countV(flag, v){
-  return visibleLeads().filter(l=> l.variant===v && l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  // A/B-test loopt binnen de VSL-funnel — chat-leads tellen niet mee
+  return visibleLeads().filter(l=> leadFunnel(l)==='video' && l.variant===v && l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
 }
 function ratioV(num,den,v){ const d=countV(den,v); return d? countV(num,v)/d : 0; }
 /* standard normal CDF (Abramowitz–Stegun erf approx) for a rough confidence read */
