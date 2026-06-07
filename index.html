@@ -764,14 +764,20 @@ const KPIS = [
 ];
 
 const TOOLS = [
-  {key:'th_allround',   name:'Trojan Horse video — All-round',    desc:'Voor opgenomen toestemmingsvideo (algemene versie)', tool:'Video'},
-  {key:'th_leadmagnet', name:'Trojan Horse video — Lead Magnet',  desc:'Versie voor lead-magnet leads', tool:'Video'},
-  {key:'th_follower',   name:'Trojan Horse video — New Follower', desc:'Versie voor nieuwe volgers', tool:'Video'},
-  {key:'video',         name:'Evergreen VSL',                     desc:'De evergreen video sales letter — houd \'m onder 2,5 min', tool:'Loom'},
-  {key:'vn_vsl',        name:'Voice-note bij Evergreen VSL',      desc:'Pro-tip: stuur dit echt als spraakmemo — voelt persoonlijker en converteert beter', tool:'Audio'},
-  {key:'booking_nl',    name:'Calendar link 🇳🇱 NL',               desc:'Agendalink voor Nederlandse leads', tool:'iClosed'},
-  {key:'booking_en',    name:'Calendar link 🇬🇧 EN',               desc:'Agendalink voor Engelse leads', tool:'iClosed'},
-  {key:'vn_booking',    name:'Voice-note bij calendar link',      desc:'Pro-tip: stuur dit echt als spraakmemo — voelt persoonlijker en converteert beter', tool:'Audio'}
+  {key:'th_allround_nl',   type:'media', accept:'video/*,image/*', name:'🇳🇱 Trojan Horse — All-round',    desc:'Toestemmingsvideo, algemene versie (NL)'},
+  {key:'th_allround_en',   type:'media', accept:'video/*,image/*', name:'🇬🇧 Trojan Horse — All-round',    desc:'Toestemmingsvideo, algemene versie (EN)'},
+  {key:'th_leadmagnet_nl', type:'media', accept:'video/*,image/*', name:'🇳🇱 Trojan Horse — Lead Magnet',  desc:'Versie voor lead-magnet leads (NL)'},
+  {key:'th_leadmagnet_en', type:'media', accept:'video/*,image/*', name:'🇬🇧 Trojan Horse — Lead Magnet',  desc:'Versie voor lead-magnet leads (EN)'},
+  {key:'th_follower_nl',   type:'media', accept:'video/*,image/*', name:'🇳🇱 Trojan Horse — New Follower', desc:'Versie voor nieuwe volgers (NL)'},
+  {key:'th_follower_en',   type:'media', accept:'video/*,image/*', name:'🇬🇧 Trojan Horse — New Follower', desc:'Versie voor nieuwe volgers (EN)'},
+  {key:'video_nl',         type:'media', accept:'video/*',         name:'🇳🇱 Evergreen VSL',               desc:'De evergreen video sales letter (NL) — houd \'m onder 2,5 min'},
+  {key:'video_en',         type:'media', accept:'video/*',         name:'🇬🇧 Evergreen VSL',               desc:'De evergreen video sales letter (EN) — houd \'m onder 2,5 min'},
+  {key:'vn_vsl_nl',        type:'media', accept:'audio/*',         name:'🇳🇱 Voice-note bij VSL',          desc:'Pro-tip: stuur als spraakmemo — converteert beter (NL)'},
+  {key:'vn_vsl_en',        type:'media', accept:'audio/*',         name:'🇬🇧 Voice-note bij VSL',          desc:'Pro-tip: stuur als spraakmemo — converteert beter (EN)'},
+  {key:'booking_nl',       type:'link',  tool:'iClosed',           name:'🇳🇱 Calendar link',               desc:'Agendalink voor Nederlandse leads'},
+  {key:'booking_en',       type:'link',  tool:'iClosed',           name:'🇬🇧 Calendar link',               desc:'Agendalink voor Engelse leads'},
+  {key:'vn_booking_nl',    type:'media', accept:'audio/*',         name:'🇳🇱 Voice-note bij calendar link',desc:'Pro-tip: stuur als spraakmemo — converteert beter (NL)'},
+  {key:'vn_booking_en',    type:'media', accept:'audio/*',         name:'🇬🇧 Voice-note bij calendar link',desc:'Pro-tip: stuur als spraakmemo — converteert beter (EN)'}
 ];
 
 let state = { leads:[], scripts:{nl:{},en:{}}, goal:30, lang:'nl' };
@@ -1639,20 +1645,23 @@ function dueRowHTML(l){
   </div>`;
 }
 
-/* de juiste hub-links als kopieerknop bij de stap waar ze horen */
+/* de juiste hub-assets (in de taal van de lead) als kopieerknop bij de stap waar ze horen */
 function assetBtnsHTML(l, step){
   const links = state.toolLinks||{};
+  const sfx = leadLang(l)==='en' ? '_en' : '_nl';
+  const flag = leadLang(l)==='en' ? '🇬🇧' : '🇳🇱';
   const btn=(label,url)=> url ? `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">${label}</button>` : '';
   let h='';
   if(step.initial){
-    h += btn('🎥 TH all-round',links.th_allround) + btn('🎥 TH lead-magnet',links.th_leadmagnet) + btn('🎥 TH new follower',links.th_follower);
+    h += btn(`🎥 TH all-round ${flag}`,links['th_allround'+sfx])
+       + btn(`🎥 TH lead-magnet ${flag}`,links['th_leadmagnet'+sfx])
+       + btn(`🎥 TH new follower ${flag}`,links['th_follower'+sfx]);
   }
   if(step.vsl){
-    h += btn('🎬 Kopieer VSL-link',links.video) + btn('🎙 Voice-note VSL',links.vn_vsl);
+    h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
   }
   if(step.booking){
-    const bl = leadLang(l)==='en' ? links.booking_en : links.booking_nl;
-    h += btn(leadLang(l)==='en'?'📅 Calendar link EN':'📅 Calendar link NL', bl) + btn('🎙 Voice-note calendar',links.vn_booking);
+    h += btn(`📅 Calendar link ${flag}`,links['booking'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_booking'+sfx]);
   }
   return h ? `<div class="qflags" style="margin-top:8px">${h}</div>` : '';
 }
@@ -1947,19 +1956,52 @@ function setLang(l){
 }
 
 /* ---------- PLAYBOOK static ---------- */
+function mediaKind(url){
+  const e=(url||'').split('?')[0].split('.').pop().toLowerCase();
+  if(['mp4','mov','webm','m4v'].includes(e)) return 'video';
+  if(['jpg','jpeg','png','gif','webp','heic'].includes(e)) return 'img';
+  if(['mp3','m4a','wav','ogg','aac','opus'].includes(e)) return 'audio';
+  return 'link';
+}
 function renderPlaybook(){
   const links = state.toolLinks || {};
-  if(links.booking && !links.booking_nl){ links.booking_nl = links.booking; delete links.booking; state.toolLinks = links; saveState(); }
+  let migrated=false;
+  if(links.booking && !links.booking_nl){ links.booking_nl=links.booking; delete links.booking; migrated=true; }
+  ['th_allround','th_leadmagnet','th_follower','video','vn_vsl','vn_booking'].forEach(k=>{
+    if(links[k] && !links[k+'_nl']){ links[k+'_nl']=links[k]; delete links[k]; migrated=true; }
+  });
+  if(migrated){ state.toolLinks=links; saveState(); }
+  const copyBtn = url=> `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">Kopieer link</button>`;
   document.getElementById('toolsWrap').innerHTML = TOOLS.map(t=>{
     const url = links[t.key]||'';
+    let body='';
+    if(t.type==='media'){
+      let prev='';
+      if(url){
+        const kind = mediaKind(url);
+        if(kind==='video') prev = `<video controls preload="metadata" style="width:100%;max-height:260px;border-radius:10px;background:#000" src="${esc(url)}"></video>`;
+        else if(kind==='img') prev = `<img src="${esc(url)}" style="max-width:100%;max-height:260px;border-radius:10px;display:block">`;
+        else if(kind==='audio') prev = `<audio controls style="width:100%" src="${esc(url)}"></audio>`;
+        else prev = `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${esc(url).slice(0,50)}…</a>`;
+      }
+      body = `${prev?`<div style="width:100%;margin-top:4px">${prev}</div>`:''}
+        <div style="display:flex;gap:7px;align-items:center;width:100%;flex-wrap:wrap">
+          <input type="file" accept="${t.accept}" style="display:none" id="up-${t.key}" onchange="uploadAsset('${t.key}',this)">
+          <button class="btn ghost sm" onclick="document.getElementById('up-${t.key}').click()">⇪ ${url?'Vervang':'Upload'}</button>
+          <span class="sd2" id="upmsg-${t.key}"></span>
+          ${url?copyBtn(url):''}
+          ${url?`<button class="btn ghost sm" style="border-color:var(--bad);color:var(--bad)" onclick="removeAsset('${t.key}')">✕</button>`:''}
+        </div>`;
+    } else {
+      body = `<div style="display:flex;gap:7px;align-items:center;width:100%">
+          <input class="gifinput" style="flex:1" data-toollink="${t.key}" placeholder="Plak hier je ${t.tool}-link…" value="${esc(url)}">
+          ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
+          ${url?copyBtn(url):''}
+        </div>`;
+    }
     return `<div class="tool" style="flex-wrap:wrap">
       <div style="flex:1;min-width:180px"><div class="tn">${t.name}</div><div class="td">${t.desc}</div></div>
-      <div class="tu">${t.tool}</div>
-      <div style="display:flex;gap:7px;align-items:center;width:100%">
-        <input class="gifinput" style="flex:1" data-toollink="${t.key}" placeholder="Plak hier je ${t.tool}-link…" value="${esc(url)}">
-        ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
-        ${url?`<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">Copy</button>`:''}
-      </div>
+      ${body}
     </div>`;
   }).join('');
   document.querySelectorAll('[data-toollink]').forEach(inp=>{
@@ -1968,8 +2010,29 @@ function renderPlaybook(){
       state.toolLinks[inp.dataset.toollink] = inp.value.trim();
       saveState();
     });
-    inp.addEventListener('change',()=> renderPlaybook());   // re-render (open/copy knop) na blur
+    inp.addEventListener('change',()=> renderPlaybook());
   });
+}
+async function uploadAsset(key, inp){
+  const f = inp.files && inp.files[0]; if(!f) return;
+  if(f.size > 50*1024*1024){ alert('Bestand groter dan 50 MB — comprimeer de video of knip hem korter.'); return; }
+  const msg = document.getElementById('upmsg-'+key); if(msg) msg.textContent = 'Uploaden… 0–60 sec';
+  const ext = (f.name.split('.').pop()||'bin').toLowerCase();
+  const path = key+'-'+Date.now()+'.'+ext;
+  const {error} = await sb.storage.from('assets').upload(path, f, {upsert:true, contentType:f.type||undefined});
+  if(error){ if(msg) msg.textContent=''; alert('Upload mislukt: '+error.message); return; }
+  const {data} = sb.storage.from('assets').getPublicUrl(path);
+  state.toolLinks = state.toolLinks||{};
+  state.toolLinks[key] = data.publicUrl;
+  saveState();
+  renderPlaybook();
+}
+function removeAsset(key){
+  if(!confirm('Deze video/audio uit de hub verwijderen?')) return;
+  state.toolLinks = state.toolLinks||{};
+  delete state.toolLinks[key];
+  saveState();
+  renderPlaybook();
 }
 
 /* ---------- GOAL ---------- */
