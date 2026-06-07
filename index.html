@@ -384,13 +384,15 @@
 
     <div id="teamStatsWrap" style="display:none">
       <div class="sec-h">Team <span style="font-family:'Space Mono';font-size:11px;color:var(--muted);font-weight:400" id="teamRangeLbl"></span></div>
-      <div class="sec-sub">Klik op een naam om de hele app op die setter te filteren.</div>
+      <div class="sec-sub">Klik op een kaart om naar de werklijst en pipeline van die setter te gaan.</div>
       <div style="overflow-x:auto" id="teamStats"></div>
     </div>
 
-    <div class="sec-h">Werklijst</div>
-    <div class="sec-sub">Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.</div>
-    <div id="worklist"></div>
+    <div id="worklistWrap">
+      <div class="sec-h">Werklijst</div>
+      <div class="sec-sub">Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.</div>
+      <div id="worklist"></div>
+    </div>
   </section>
 
   <!-- ================= CIJFERS ================= -->
@@ -788,13 +790,26 @@ let lastLoad = 0;
 
 function setterName(id){ const p = team.find(t=>t.id===id); return p ? (p.name||p.email) : '?'; }
 function stripPrivate(l){ const c = Object.assign({}, l); delete c._setter; return c; }
-/* which setter new leads belong to (owner can work "as" a setter via the filter) */
-function targetSetter(){ return (me && me.role==='owner' && setterFilter!=='all') ? setterFilter : me.id; }
+/* aan welke setter nieuwe leads toebehoren — owner doet zelf geen outreach */
+function targetSetter(){
+  if(!me) return null;
+  if(me.role!=='owner') return me.id;
+  if(setterFilter!=='all') return setterFilter;
+  // owner op 'hele team': geef nieuwe leads aan de setter met de minste voorraad
+  const setters = team.filter(t=>t.role==='setter');
+  if(!setters.length) return me.id;
+  let best=setters[0], bestN=Infinity;
+  setters.forEach(p=>{
+    const n = state.leads.filter(l=> l._setter===p.id && l.phase!=='dead' && !(l.flags&&l.flags.approached)).length;
+    if(n<bestN){ bestN=n; best=p; }
+  });
+  return best.id;
+}
 function setSetterFilter(v){ setterFilter = v; renderAll(); }
 function renderSetterSwitcher(){
   const sel = document.getElementById('setterSwitch'); if(!sel) return;
   sel.innerHTML = `<option value="all">Hele team</option>` +
-    team.map(t=>`<option value="${t.id}">${esc(t.name||t.email)}${t.role==='owner'?' (owner)':''}</option>`).join('');
+    team.filter(t=>t.role==='setter').map(t=>`<option value="${t.id}">${esc(t.name||t.email)}</option>`).join('');
   sel.value = setterFilter;
 }
 
@@ -1051,7 +1066,7 @@ function renderMetrics(){
   const appToday = visibleLeads().filter(l=>l.flags && l.flags.approached && l.approachDate===today).length;
   const outreaches = count('approached');           // already windowed
   const days = windowDays();
-  const seats = (me && me.role==='owner' && setterFilter==='all') ? Math.max(1, team.length) : 1;
+  const seats = (me && me.role==='owner' && setterFilter==='all') ? Math.max(1, team.filter(x=>x.role==='setter').length) : 1;
   const target = days ? state.goal*days*seats : null;  // null for "All" → no KPI judgment
   const meets = target!==null && outreaches>=target;
   const volCls = target===null ? 'neutral' : (meets?'ok':'under');
@@ -1088,35 +1103,48 @@ function renderMetrics(){
   document.getElementById('approachedToday').textContent = appToday;
 }
 
-/* ---------- TEAM TABLE (owner) — per-setter funnel within the window ---------- */
+/* ---------- TEAM-COCKPIT (owner) — per-setter overzicht ---------- */
 function renderTeam(){
   const wrap = document.getElementById('teamStatsWrap'); if(!wrap) return;
   if(!me || me.role!=='owner'){ wrap.style.display='none'; return; }
   wrap.style.display='block';
   const lbl=document.getElementById('teamRangeLbl'); if(lbl) lbl.textContent='— '+rangeLabel();
-  const today = todayISO();
-  const cnt = (ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
-  const pct = (n,d)=> d ? (n/d*100).toFixed(0)+'%' : '—';
-  let html = `<table><thead><tr>
-    <th>Setter</th><th>Vandaag</th><th>Approached</th><th>MSR</th><th>PRR</th><th>BSR</th><th>ABR</th><th>Booked</th>
-  </tr></thead><tbody>`;
-  team.forEach(t=>{
-    const ls = state.leads.filter(l=> (l._setter||me.id)===t.id);
+  const t = todayISO();
+  const setters = team.filter(x=>x.role==='setter');
+  const cnt=(ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  const pct=(n,d)=> d ? (n/d*100).toFixed(0)+'%' : '—';
+  const staleDays=l=> l.lastMsgDate ? Math.round((new Date(t)-new Date(l.lastMsgDate))/86400000) : 0;
+  if(!setters.length){ document.getElementById('teamStats').innerHTML='<div class="empty">Nog geen setters — stuur ze de app-link om een account te maken.</div>'; return; }
+  let html='<div class="abgrid">';
+  setters.forEach(p=>{
+    const ls = state.leads.filter(l=> l._setter===p.id);
+    const active = l=> !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
+    const sent = ls.filter(l=> l.flags && l.flags.approached && l.approachDate===t).length;
+    const late = ls.filter(l=> active(l) && ((l.due && l.due<t) || (l.phase!=='c_closed' && staleDays(l)>=2 && (!l.due || l.due<=t)))).length;
+    const dueToday = ls.filter(l=> active(l) && l.due===t).length;
+    const voorraad = ls.filter(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached)).length;
+    const convos = ls.filter(l=> l.phase==='c_convo' || l.phase==='engaged').length;
     const ap = cnt(ls,'approached');
-    const tod = ls.filter(l=> l.flags && l.flags.approached && l.approachDate===today).length;
-    const todCls = tod>=state.goal ? 'ok' : 'under';
-    html += `<tr class="row" style="cursor:pointer" onclick="setSetterFilter('${t.id}');document.getElementById('setterSwitch').value='${t.id}'">
-      <td><b>${esc(t.name||t.email)}</b>${t.role==='owner'?' <span class="plat">owner</span>':''}</td>
-      <td><span class="tag ${todCls}" style="font-family:'Space Mono';font-size:11px;padding:2px 8px;border-radius:20px">${tod} / ${state.goal}</span></td>
-      <td style="font-family:'Space Mono';font-size:12px">${ap}</td>
-      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'seen'),ap)}</td>
-      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'positive'),ap)}</td>
-      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'booksent'),ap)}</td>
-      <td style="font-family:'Space Mono';font-size:12px">${pct(cnt(ls,'booked'),ap)}</td>
-      <td style="font-family:'Space Mono';font-size:12px"><b>${cnt(ls,'booked')}</b></td>
-    </tr>`;
+    const status = late>0 ? ['var(--bad)','⚠ follow-ups te laat']
+                 : (sent>=state.goal ? ['var(--go)','✓ dagdoel gehaald'] : ['var(--warn)','dagdoel nog niet gehaald']);
+    html += `<div class="abcard" style="cursor:pointer" onclick="setSetterFilter('${p.id}');document.getElementById('setterSwitch').value='${p.id}'">
+      <h4>${esc(p.name||p.email)}</h4>
+      <div class="abn" style="color:${status[0]};font-weight:700">● ${status[1]}</div>
+      <div style="margin:8px 0 12px">
+        <div class="bar" style="background:var(--paper-2);height:10px"><i style="display:block;height:100%;border-radius:20px;background:var(--signal);width:${Math.min(100,(sent/state.goal)*100)}%"></i></div>
+        <div class="abn" style="margin-top:5px">${sent} / ${state.goal} eerste DM's vandaag</div>
+      </div>
+      <div class="abstat"><span class="k">⚠ Te laat & stil</span><span class="v" style="${late?'color:var(--bad)':''}">${late}</span></div>
+      <div class="abstat"><span class="k">Follow-ups vandaag</span><span class="v">${dueToday}</span></div>
+      <div class="abstat"><span class="k">Actieve gesprekken</span><span class="v">${convos}</span></div>
+      <div class="abstat"><span class="k">Voorraad eerste DM</span><span class="v">${voorraad}</span></div>
+      <div class="abstat"><span class="k">Benaderd · ${rangeLabel()}</span><span class="v">${ap}</span></div>
+      <div class="abstat"><span class="k">Reply rate</span><span class="v">${pct(cnt(ls,'positive'),ap)}</span></div>
+      <div class="abstat"><span class="k">Calls voorgesteld</span><span class="v">${cnt(ls,'booksent')}</span></div>
+      <div class="abstat"><span class="k">Geboekt</span><span class="v primary">${cnt(ls,'booked')}</span></div>
+    </div>`;
   });
-  html += '</tbody></table>';
+  html += '</div>';
   document.getElementById('teamStats').innerHTML = html;
 }
 
@@ -1327,6 +1355,10 @@ function convoLinkHTML(l){
 /* ---------- WERKLIJST (alles wat NU moet, op prioriteit) ---------- */
 function renderWorklist(){
   const wrap = document.getElementById('worklist'); if(!wrap) return;
+  // owner op 'hele team' = monitoren, niet zelf werken → geen persoonlijke werklijst
+  const wlw = document.getElementById('worklistWrap');
+  const monitorMode = me && me.role==='owner' && setterFilter==='all';
+  if(wlw) wlw.style.display = monitorMode ? 'none' : 'block';
   const t = todayISO();
   const vis = visibleLeads();
   const active = l=> !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
@@ -1344,11 +1376,13 @@ function renderWorklist(){
   // 3. nieuwe eerste DM's — aangevuld tot het dagdoel
   const fresh = vis.filter(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached));
   const appToday = vis.filter(l=> l.flags && l.flags.approached && l.approachDate===t).length;
-  const room = Math.max(0, state.goal - appToday);
+  const dayGoal = state.goal * (monitorMode ? Math.max(1, team.filter(x=>x.role==='setter').length) : 1);
+  const room = Math.max(0, dayGoal - appToday);
   const freshNow = fresh.slice(0, room);
 
   const workCount = late.length + today.length + freshNow.length;
   const cw = document.getElementById('cntWork'); if(cw) cw.textContent = workCount;
+  if(monitorMode) return;   // kaarten in team-cockpit tonen het werk per setter
 
   const head=(emoji,title,n,cls)=>`<div class="qgroup-h"><span class="dot ${cls}"></span>${emoji} ${title} <span class="qn">${n}</span></div>`;
   const list=(rows)=>'<div style="display:flex;flex-direction:column;gap:9px">'+rows.join('')+'</div>';
@@ -1362,8 +1396,8 @@ function renderWorklist(){
   }
   if(!html){
     html = `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px">${
-      room===0 ? `🎉 Dagdoel gehaald (${appToday}/${state.goal}) en geen follow-ups open. Tot morgen.` :
-      `Werklijst leeg — importeer nieuwe leads (⇪ Importeer) om je dagdoel van ${state.goal} te halen.`}</div>`;
+      room===0 ? `🎉 Dagdoel gehaald (${appToday}/${dayGoal}) en geen follow-ups open. Tot morgen.` :
+      `Werklijst leeg — importeer nieuwe leads (⇪ Importeer) om je dagdoel van ${dayGoal} te halen.`}</div>`;
   }
   wrap.innerHTML = html;
 }
