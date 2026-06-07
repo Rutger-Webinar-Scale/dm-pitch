@@ -371,11 +371,11 @@
   <section class="view show" id="view-dash">
     <div class="target">
       <div>
-        <div class="tlabel">Volume wint — dagelijks IG outreach-doel</div>
+        <div class="tlabel" id="goalLabel">Jouw dagdoel — eerste DM's vandaag</div>
         <div class="big"><span id="appNow">0</span> / <span id="appGoal">30</span></div>
       </div>
       <div class="bar"><i id="appBar" style="width:0%"></i></div>
-      <button class="btn ghost sm" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Doel aanpassen</button>
+      <button class="btn ghost sm" id="goalEditBtn" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Doel aanpassen</button>
     </div>
 
     <div class="daily" id="dailyStrip" style="margin-top:20px"></div>
@@ -389,8 +389,8 @@
     </div>
 
     <div id="worklistWrap">
-      <div class="sec-h">Werklijst</div>
-      <div class="sec-sub">Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.</div>
+      <div class="sec-h" id="wlTitle">Jouw werklijst</div>
+      <div class="sec-sub" id="wlSub">Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.</div>
       <div id="worklist"></div>
     </div>
   </section>
@@ -2391,7 +2391,30 @@ function setAbVariants(n){
 }
 
 /* ---------- render all ---------- */
-function renderAll(){ renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); }
+/* copy die meebeweegt met de rol: setter = "jij", owner = "team" of de gekozen setter */
+function applyRoleCopy(){
+  const gl = document.getElementById('goalLabel');
+  const ge = document.getElementById('goalEditBtn');
+  const wt = document.getElementById('wlTitle');
+  const ws = document.getElementById('wlSub');
+  if(!gl) return;
+  if(me && me.role==='owner'){
+    if(ge) ge.style.display='inline-block';
+    if(setterFilter==='all'){
+      gl.textContent = "Team-dagdoel — eerste DM's vandaag (alle setters samen)";
+    } else {
+      gl.textContent = `Dagdoel van ${setterName(setterFilter)} — eerste DM's vandaag`;
+      if(wt) wt.textContent = `Werklijst van ${setterName(setterFilter)}`;
+      if(ws) ws.textContent = `Dit is wat ${setterName(setterFilter)} nu zou moeten doen. Jij kunt hier ook zelf acties uitvoeren.`;
+    }
+  } else {
+    if(ge) ge.style.display='none';   // dagdoel is een team-instelling, alleen de owner past 'm aan
+    gl.textContent = "Jouw dagdoel — eerste DM's vandaag";
+    if(wt) wt.textContent = 'Jouw werklijst';
+    if(ws) ws.textContent = 'Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.';
+  }
+}
+function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); }
 
 /* ---------- tabs ---------- */
 function switchView(v){
