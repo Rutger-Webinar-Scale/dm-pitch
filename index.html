@@ -1935,8 +1935,7 @@ function loadScriptValues(){
   document.querySelectorAll('[data-script]').forEach(t=>{
     const key=t.dataset.script;
     t.value = s[key]||'';
-    const ph = t.getAttribute('data-ph-'+state.lang);
-    if(ph!==null) t.placeholder = ph;
+    t.placeholder = '';
   });
 }
 function setLang(l){
