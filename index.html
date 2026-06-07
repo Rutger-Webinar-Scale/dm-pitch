@@ -484,7 +484,7 @@
           </div>
         </div>
         <div id="initialBlock"></div>
-        <div class="vedithead" style="margin-top:14px">Follow-ups initieel bericht</div>
+        <div class="vedithead" style="margin-top:14px">Follow-ups</div>
         <div id="intentFups"></div>
       </div>
 
@@ -492,16 +492,14 @@
         <h4><span class="phase-dot" style="background:var(--engaged)"></span> 2 · VSL</h4>
         <div class="meta">Ze reageerden 👍 → stuur de evergreen VSL + voice-note. Daaronder de follow-ups.</div>
         <div id="hub-vsl"></div>
-        <div class="vedithead" style="margin-top:14px">Follow-ups VSL</div>
-        <div id="engagedFups"></div>
+        <div id="engagedFups" style="margin-top:14px"></div>
       </div>
 
       <div class="scard">
         <h4><span class="phase-dot" style="background:var(--booked)"></span> 3 · Booking</h4>
         <div class="meta">Stuur de calendar link + voice-note. Daaronder de follow-ups — alles wijst naar de agenda.</div>
         <div id="hub-booking"></div>
-        <div class="vedithead" style="margin-top:14px">Follow-ups booking</div>
-        <div id="bookedFups"></div>
+        <div id="bookedFups" style="margin-top:14px"></div>
       </div>
     </div>
 
@@ -1897,14 +1895,16 @@ function buildScriptBlocks(){
   h+=blockHTML('Reactie op negatief antwoord','neg',"Helemaal goed — fijne dag nog!","No worries at all — have a great one!",false);
   document.getElementById('intentFups').innerHTML=h;
   // ENGAGED
-  h=blockHTML('VSL / video','vsl',"[loom link] — houd 'm onder 2,5 min.","[loom link] — keep under 2.5 min.",true);
+  h='<div class="vedithead">Reactie</div>'+blockHTML('VSL-bericht','vsl',"[loom link]","[loom link]",true);
+  h+='<div class="vedithead" style="margin-top:14px">Follow-ups</div>';
   const eDef={1:["Heb je de video kunnen bekijken?","Did you get a chance to watch?"],2:["{{first.name}} 👀","{{first.name}} 👀"]};
-  for(let i=1;i<=8;i++){ const d=eDef[i]||["",""]; h+=blockHTML('E-FUP '+i,'efup'+i,d[0],d[1],true); }
+  for(let i=1;i<=8;i++){ const d=eDef[i]||["",""]; h+=blockHTML('FUP '+i,'efup'+i,d[0],d[1],true); }
   document.getElementById('engagedFups').innerHTML=h;
   // BOOKED
-  h=blockHTML('Bookingbericht','booking',"Top — kies een moment dat jou uitkomt: [booking link]","Perfect — grab any slot that works: [booking link]",true);
+  h='<div class="vedithead">Reactie</div>'+blockHTML('Bookingbericht','booking',"Top — kies een moment dat jou uitkomt: [booking link]","Perfect — grab any slot that works: [booking link]",true);
+  h+='<div class="vedithead" style="margin-top:14px">Follow-ups</div>';
   const bDef={1:["Hier de link nog een keer: [booking link]","Here's the link again: [booking link]"],2:["Zullen we een moment inplannen?","Still want to lock in a time?"]};
-  for(let i=1;i<=8;i++){ const d=bDef[i]||["",""]; h+=blockHTML('B-FUP '+i,'bfup'+i,d[0],d[1],true); }
+  for(let i=1;i<=8;i++){ const d=bDef[i]||["",""]; h+=blockHTML('FUP '+i,'bfup'+i,d[0],d[1],true); }
   document.getElementById('bookedFups').innerHTML=h;
   // CHAT FUNNEL
   document.getElementById('chatFups').innerHTML = blockHTML('Kwartaal check-in · afgesloten leads','quarterly',
