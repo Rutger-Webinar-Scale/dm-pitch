@@ -1954,6 +1954,22 @@ function mediaKind(url){
   if(['mp3','m4a','wav','ogg','aac','opus'].includes(e)) return 'audio';
   return 'link';
 }
+/* preview voor een asset-URL: embed externe hosts (Loom/YouTube/Drive/Vimeo) zodat grote
+   video's gewoon in de app afspelen zonder 50MB-uploadlimiet; anders directe media of een link */
+function embedHtml(url){
+  const u=(url||'').trim(); if(!u) return '';
+  const iframe = src => `<iframe src="${src}" style="width:100%;aspect-ratio:16/9;border:0;border-radius:9px;background:#000" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+  let m;
+  if((m=u.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/)))                       return iframe(`https://www.loom.com/embed/${m[1]}`);
+  if((m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/))) return iframe(`https://www.youtube.com/embed/${m[1]}`);
+  if((m=u.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)))                    return iframe(`https://drive.google.com/file/d/${m[1]}/preview`);
+  if((m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/)))                                     return iframe(`https://player.vimeo.com/video/${m[1]}`);
+  const kind=mediaKind(u);
+  if(kind==='video') return `<video controls preload="metadata" style="width:100%;max-height:220px;border-radius:9px;background:#000" src="${esc(u)}"></video>`;
+  if(kind==='img')   return `<img src="${esc(u)}" style="max-width:100%;max-height:220px;border-radius:9px;display:block">`;
+  if(kind==='audio') return `<audio controls style="width:100%" src="${esc(u)}"></audio>`;
+  return `<a class="link" href="${esc(u)}" target="_blank" rel="noopener">${esc(u).slice(0,40)}…</a>`;
+}
 function renderPlaybook(){
   const links = state.toolLinks || {};
   let migrated=false;
@@ -1973,21 +1989,18 @@ function renderPlaybook(){
     const url = links[key]||'';
     let body='';
     if(t.type==='media'){
-      let prev='';
-      if(url){
-        const kind = mediaKind(url);
-        if(kind==='video') prev = `<video controls preload="metadata" style="width:100%;max-height:220px;border-radius:9px;background:#000" src="${esc(url)}"></video>`;
-        else if(kind==='img') prev = `<img src="${esc(url)}" style="max-width:100%;max-height:220px;border-radius:9px;display:block">`;
-        else if(kind==='audio') prev = `<audio controls style="width:100%" src="${esc(url)}"></audio>`;
-        else prev = `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${esc(url).slice(0,40)}…</a>`;
-      }
+      const prev = embedHtml(url);
       body = `${prev?`<div style="margin:7px 0">${prev}</div>`:''}
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
           <input type="file" accept="${t.accept}" style="display:none" id="up-${key}" onchange="uploadAsset('${key}',this)">
-          <button class="btn ghost sm" onclick="document.getElementById('up-${key}').click()">⇪ ${url?'Vervang':'Upload'}</button>
+          <button class="btn ghost sm" onclick="document.getElementById('up-${key}').click()">⇪ ${url?'Vervang':'Upload'} <span style="opacity:.55">(&lt;50MB)</span></button>
           <span class="sd2" id="upmsg-${key}"></span>
           ${url?copyBtn(url):''}
           ${url?`<button class="btn ghost sm" style="border-color:var(--bad);color:var(--bad)" onclick="removeAsset('${key}')">✕</button>`:''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:140px" data-toollink="${key}" placeholder="…of plak een Loom / Drive / YouTube / Vimeo-link (geen groottelimiet)" value="${esc(url)}">
+          ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
         </div>`;
     } else {
       body = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
@@ -2019,7 +2032,7 @@ function renderPlaybook(){
 }
 async function uploadAsset(key, inp){
   const f = inp.files && inp.files[0]; if(!f) return;
-  if(f.size > 50*1024*1024){ alert('Bestand groter dan 50 MB — comprimeer de video of knip hem korter.'); return; }
+  if(f.size > 50*1024*1024){ alert('Direct uploaden kan tot 50 MB. Voor grotere video’s: zet ’m op Loom / Google Drive / YouTube en plak de link in het veld eronder — die heeft geen groottelimiet en speelt gewoon af in de app.'); return; }
   const msg = document.getElementById('upmsg-'+key); if(msg) msg.textContent = 'Uploaden… 0–60 sec';
   const ext = (f.name.split('.').pop()||'bin').toLowerCase();
   const path = key+'-'+Date.now()+'.'+ext;
