@@ -2013,10 +2013,10 @@ function renderPlaybook(){
           ${url?copyBtn(url):''}
           ${url?`<button class="btn ghost sm" style="border-color:var(--bad);color:var(--bad)" onclick="removeAsset('${key}')">✕</button>`:''}
         </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+        ${t.base.startsWith('vn_') ? '' : `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
           <input class="gifinput" style="flex:1;min-width:140px" data-toollink="${key}" placeholder="…of plak een Loom / Drive / YouTube / Vimeo-link (geen groottelimiet)" value="${esc(url)}">
           ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
-        </div>`;
+        </div>`}`;
     } else {
       body = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
           <input class="gifinput" style="flex:1;min-width:140px" data-toollink="${key}" placeholder="Plak hier je ${t.tool}-link (${state.lang.toUpperCase()})…" value="${esc(url)}">
