@@ -469,7 +469,7 @@
       </div>
     </div>
 
-    <div class="mignote" style="margin-top:16px">📅 <b>Cadans:</b> follow-ups gaan altijd om de dag, exclusief weekend — ma → wo → vr → di. Het systeem plant de volgende datum automatisch.</div>
+    <div class="mignote" style="margin-top:16px">📅 <b>Cadans:</b> follow-up 1 & 2 komen na 12 uur, daarna elke 2 dagen. Plannen valt altijd tussen 06:00–22:00 en slaat het weekend over. Het systeem plant de volgende actie automatisch.</div>
 
     <div class="chain" style="margin-top:16px">
       <div class="scard">
@@ -560,8 +560,8 @@
           <input class="f" id="f-fups" type="number" min="0" value="0">
         </div>
         <div>
-          <label class="f">Volgende follow-up datum</label>
-          <input class="f" id="f-due" type="date">
+          <label class="f">Volgende follow-up</label>
+          <input class="f" id="f-due" type="datetime-local">
         </div>
       </div>
       <div class="grid2">
@@ -923,6 +923,21 @@ async function doLogout(){ await sb.auth.signOut(); location.reload(); }
 
 /* ---------- helpers ---------- */
 const todayISO = ()=> new Date().toISOString().slice(0,10);
+// lokale datetime "YYYY-MM-DDTHH:MM" (geen UTC-shift) — gebruikt voor follow-up planning
+function nowISO(){ return toLocalISO(new Date()); }
+function toLocalISO(d){ const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+// houd een gepland moment binnen werkuren (06:00–22:00) en buiten het weekend
+const WAKE_START=6, WAKE_END=22;
+function clampSchedule(d){
+  if(d.getHours()<WAKE_START){ d.setHours(WAKE_START,0,0,0); }
+  else if(d.getHours()>=WAKE_END){ d.setDate(d.getDate()+1); d.setHours(WAKE_START,0,0,0); }
+  while(d.getDay()===0||d.getDay()===6){ d.setDate(d.getDate()+1); d.setHours(WAKE_START,0,0,0); }
+  return d;
+}
+// toon tijd als 'due' vandaag is, anders MM-DD
+function fmtDue(due){ const hm = due.length>10 ? due.slice(11,16) : '';
+  return (due.slice(0,10)===todayISO() && hm) ? hm : due.slice(5,10); }
 function fmtPct(n){ return (n*100).toFixed(0)+'%'; }
 
 /* which date field stamps each tracked event */
@@ -1115,6 +1130,7 @@ function renderTeam(){
   wrap.style.display='block';
   const lbl=document.getElementById('teamRangeLbl'); if(lbl) lbl.textContent='— '+rangeLabel();
   const t = todayISO();
+  const nts = nowISO();
   const setters = team.filter(x=>x.role==='setter');
   const cnt=(ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
   const pct=(n,d)=> d ? (n/d*100).toFixed(0)+'%' : '—';
@@ -1125,8 +1141,8 @@ function renderTeam(){
     const ls = state.leads.filter(l=> l._setter===p.id);
     const active = l=> !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
     const sent = ls.filter(l=> l.flags && l.flags.approached && l.approachDate===t).length;
-    const late = ls.filter(l=> active(l) && ((l.due && l.due<t) || (l.phase!=='c_closed' && staleDays(l)>=2 && (!l.due || l.due<=t)))).length;
-    const dueToday = ls.filter(l=> active(l) && l.due===t).length;
+    const late = ls.filter(l=> active(l) && ((l.due && l.due<nts) || (l.phase!=='c_closed' && staleDays(l)>=2 && (!l.due || l.due<=nts)))).length;
+    const dueToday = ls.filter(l=> active(l) && l.due && l.due.slice(0,10)===t).length;
     const voorraad = ls.filter(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached)).length;
     const convos = ls.filter(l=> l.phase==='c_convo' || l.phase==='engaged').length;
     const ap = cnt(ls,'approached');
@@ -1295,24 +1311,24 @@ function moveLeadPhase(id, phase){
   if(phase==='engaged'){
     l.flags.approached = l.flags.seen = l.flags.positive = true;
     l.fups = 0;
-    l.due = nextFupDate();
+    l.due = nextFupDate(l.fups);
   } else if(phase==='booked'){
     l.flags.approached = l.flags.seen = l.flags.positive = l.flags.booksent = l.flags.booked = true;
     l.fups = 0; l.due = '';
   } else if(phase==='intent'){
     l.flags.approached = true;        // it's in the board, so it's been sent
-    if(!l.due) l.due = nextFupDate();
+    if(!l.due) l.due = nextFupDate(l.fups);
   } else if(phase==='c_new'){
     l.flags.approached = true;
-    if(!l.due) l.due = nextFupDate();
+    if(!l.due) l.due = nextFupDate(l.fups);
   } else if(phase==='c_convo'){
     l.flags.approached = l.flags.positive = true;
     l.fups = 0;
-    l.due = nextFupDate();
+    l.due = nextFupDate(l.fups);
   } else if(phase==='c_call'){
     l.flags.approached = l.flags.positive = l.flags.booksent = true;
     l.fups = 0;
-    l.due = nextFupDate();
+    l.due = nextFupDate(l.fups);
   } else if(phase==='c_booked'){
     l.flags.approached = l.flags.positive = l.flags.booksent = l.flags.booked = true;
     l.fups = 0; l.due = '';
@@ -1340,10 +1356,10 @@ function leadCardHTML(l){
 }
 function dueBadge(l){
   if(!l.due || l.phase==='dead' || l.phase==='booked' || l.phase==='c_booked') return '';
-  const today = todayISO();
-  let cls='later', txt=l.due.slice(5);
-  if(l.due<=today){cls='today';txt='nu';}
-  else{ const diff=(new Date(l.due)-new Date(today))/86400000; if(diff<=2)cls='soon'; }
+  const now = nowISO();
+  let cls='later', txt=fmtDue(l.due);
+  if(l.due<=now){cls='today';txt='nu';}
+  else{ const diff=(new Date(l.due)-new Date())/86400000; if(diff<=2)cls='soon'; }
   return `<span class="due ${cls}">${txt}</span>`;
 }
 /* ⚠ alert: 2+ dagen geen bericht in een actieve fase → tijd voor follow-up */
@@ -1365,6 +1381,7 @@ function renderWorklist(){
   const monitorMode = me && me.role==='owner' && setterFilter==='all';
   if(wlw) wlw.style.display = monitorMode ? 'none' : 'block';
   const t = todayISO();
+  const nts = nowISO();
   const vis = visibleLeads();
   const active = l=> !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
   const staleDays = l=> l.lastMsgDate ? Math.round((new Date(t)-new Date(l.lastMsgDate))/86400000) : 0;
@@ -1373,11 +1390,11 @@ function renderWorklist(){
 
   // 1. te laat + stilgevallen (2+ dagen geen bericht zonder geplande follow-up in de toekomst)
   const late = take(vis.filter(l=> active(l) && (
-      (l.due && l.due<t) ||
-      (l.phase!=='c_closed' && staleDays(l)>=2 && (!l.due || l.due<=t))
+      (l.due && l.due<nts) ||
+      (l.phase!=='c_closed' && staleDays(l)>=2 && (!l.due || l.due<=nts))
     )).sort((a,b)=>(a.due||'0')<(b.due||'0')?-1:1));
   // 2. follow-ups die vandaag gepland staan
-  const today = take(vis.filter(l=> active(l) && l.due===t));
+  const today = take(vis.filter(l=> active(l) && l.due && l.due.slice(0,10)===t));
   // 3. nieuwe eerste DM's — aangevuld tot het dagdoel
   const fresh = vis.filter(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached));
   const appToday = vis.filter(l=> l.flags && l.flags.approached && l.approachDate===t).length;
@@ -1459,7 +1476,7 @@ function markInitialSent(id){
   l.lastMsgDate = todayISO();              // outbound bericht = laatste berichtdatum
   l.phase = leadFunnel(l)==='chat' ? 'c_new' : 'intent';
   l.fups = 0;
-  l.due = nextFupDate();
+  l.due = nextFupDate(l.fups);
   stampFlagDates(l);
   saveState(); renderAll();
 }
@@ -1493,13 +1510,13 @@ function toggleLeadFlag(id, flag){
     // turning a flag on implies the earlier funnel steps happened + advances the phase
     if(flag==='booked'){ l.flags.approached=l.flags.seen=l.flags.positive=l.flags.booksent=true; l.flags.negative=false; l.phase='booked'; l.fups=0; l.due=''; }
     else if(flag==='booksent'){ l.flags.approached=l.flags.seen=l.flags.positive=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; } }
-    else if(flag==='positive'){ l.flags.approached=l.flags.seen=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; l.due=nextFupDate(); } }
+    else if(flag==='positive'){ l.flags.approached=l.flags.seen=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; l.due=nextFupDate(l.fups); } }
     else if(flag==='negative'){ l.flags.approached=l.flags.seen=true; l.flags.positive=l.flags.booksent=l.flags.booked=false; l.phase='dead'; l.due=''; if(!l.negativeDate) l.negativeDate=todayISO(); }
     else if(flag==='seen'){ l.flags.approached=true; }
     stampFlagDates(l);
   } else {
     // turning a flag back off — undo the side-effects where it makes sense
-    if(flag==='negative' && l.phase==='dead'){ l.phase = l.flags.positive?'engaged':'intent'; if(l.flags.approached && !l.due){ l.due=nextFupDate(); } }
+    if(flag==='negative' && l.phase==='dead'){ l.phase = l.flags.positive?'engaged':'intent'; if(l.flags.approached && !l.due){ l.due=nextFupDate(l.fups); } }
   }
   saveState(); renderAll();
 }
@@ -1669,10 +1686,9 @@ function copyScript(btn){
 /* push a lead's next touch out by n days */
 function snooze(id,n){
   const l = state.leads.find(x=>x.id===id); if(!l) return;
-  const base = l.due && l.due>todayISO() ? new Date(l.due) : new Date();
+  const base = l.due && l.due>nowISO() ? new Date(l.due) : new Date();
   base.setDate(base.getDate()+n);
-  while(base.getDay()===0 || base.getDay()===6) base.setDate(base.getDate()+1);   // weekend overslaan
-  l.due = base.toISOString().slice(0,10);
+  l.due = toLocalISO(clampSchedule(base));   // werkuren + weekend overslaan
   saveState(); renderAll();
 }
 
@@ -1689,18 +1705,16 @@ function markReplied(id){
   saveState(); renderAll();
 }
 
-/* cadans: ALLE follow-ups om de dag, exclusief weekend → ma→wo→vr→di→do→ma... */
-function addWorkdays(n){
+/* cadans: follow-up 1 & 2 na 12 uur, daarna elke 2 dagen — werkuren 06–22, weekend overslaan */
+function nextFupDate(fupsSent){
   const d = new Date();
-  let left = n;
-  while(left>0){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0 && w!==6) left--; }
-  return d.toISOString().slice(0,10);
+  if((fupsSent||0) < 2){ d.setTime(d.getTime() + 12*3600*1000); }  // fup 1 & 2: +12 uur
+  else { d.setDate(d.getDate() + 2); }                             // daarna: elke 2 dagen
+  return toLocalISO(clampSchedule(d));
 }
-function nextFupDate(){ return addWorkdays(2); }                 // om de dag (2 werkdagen verder)
 function addDaysSkipWeekend(n){                                  // voor de kwartaal check-in
   const d = new Date(); d.setDate(d.getDate()+n);
-  while(d.getDay()===0 || d.getDay()===6) d.setDate(d.getDate()+1);
-  return d.toISOString().slice(0,10);
+  return toLocalISO(clampSchedule(d));
 }
 
 /* one-click follow-up: increment count, push next due date, snap timing */
@@ -1713,7 +1727,7 @@ function logFollowup(id){
   l.lastMsgDate = todayISO();              // outbound follow-up = laatste bericht
   l.lastFupDate = todayISO();
   // om de dag, exclusief weekend; kwartaal check-in = 90 dagen
-  l.due = l.phase==='c_closed' ? addDaysSkipWeekend(90) : nextFupDate();
+  l.due = l.phase==='c_closed' ? addDaysSkipWeekend(90) : nextFupDate(l.fups);
   if(l.fups>=max) l.due = ''; // exhausted, clear queue
   saveState(); renderAll();
 }
@@ -1733,7 +1747,7 @@ function renderTable(){
       <td>${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">open ↗</a>`:'<span style="color:var(--muted)">—</span>'}</td>
       <td><span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></td>
       <td style="font-family:'Space Mono';font-size:12px">${l.fups||0}/${PHASES[l.phase].maxFup}</td>
-      <td>${l.due?dueBadge(l)||l.due.slice(5):'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${l.due?dueBadge(l)||fmtDue(l.due):'<span style="color:var(--muted)">—</span>'}</td>
       <td><button class="btn ghost sm" onclick="openLead('${l.id}')">Bewerk</button></td>
     </tr>`;
   });
@@ -1751,7 +1765,7 @@ function openLead(id){
   document.getElementById('f-username').value = l?.username||'';
   document.getElementById('f-link').value = l?.link||'';
   document.getElementById('f-fups').value = l?.fups||0;
-  document.getElementById('f-due').value = l?.due||'';
+  document.getElementById('f-due').value = l?.due ? (l.due.length>10 ? l.due : l.due+'T09:00') : '';
   document.getElementById('f-convo').value = l?.convoLink||'';
   document.getElementById('f-lastmsg').value = l?.lastMsgDate||'';
   document.getElementById('f-funnel').value = l ? leadFunnel(l) : '';
