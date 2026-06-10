@@ -332,6 +332,30 @@
   .syncpill.busy{background:var(--paper-2);color:var(--muted)}
   .mignote{font-family:'Space Mono',monospace;font-size:10.5px;line-height:1.7;color:var(--ink);background:var(--paper-2);border-radius:8px;padding:10px 12px;margin-bottom:10px}
   .mignote code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10px}
+  /* ---- agenda / kalender ---- */
+  .calhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .calnav{display:flex;gap:6px;align-items:center}
+  .calnav button{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:3px 10px;cursor:pointer}
+  .calnav button:hover{border-color:var(--signal);color:var(--signal)}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .calgrid.head{margin-top:14px;gap:6px}
+  .caldow{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;font-weight:700}
+  .calcell{position:relative;min-height:58px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:6px 7px;cursor:pointer;transition:border-color .12s,background .12s}
+  .calcell.empty{border:0;background:transparent;cursor:default}
+  .calcell:not(.empty):hover{border-color:var(--signal)}
+  .calcell.today{border-color:var(--signal);box-shadow:inset 0 0 0 1px var(--signal)}
+  .calcell.sel{background:var(--paper-2);border-color:var(--ink)}
+  .calcell .cd{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--ink)}
+  .calcell.past:not(.today) .cd{color:var(--muted)}
+  .calcell .cbadge{position:absolute;top:5px;right:6px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;background:var(--signal);color:#fff;border-radius:20px;padding:1px 7px;min-width:18px;text-align:center}
+  .calcell .cbadge.od{background:var(--bad)}
+  .caldots{position:absolute;bottom:6px;left:7px;display:flex;gap:3px;flex-wrap:wrap}
+  .cdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .cdot.dm{background:var(--intent)}
+  .cdot.fup{background:var(--engaged)}
+  .calday{margin-top:14px}
+  .calleg{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+  .calleg span{display:inline-flex;align-items:center;gap:5px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -388,6 +412,8 @@
       <div class="sec-sub">Klik op een kaart om naar de werklijst en pipeline van die setter te gaan.</div>
       <div style="overflow-x:auto" id="teamStats"></div>
     </div>
+
+    <div id="calWrap" style="margin-top:24px"></div>
 
     <div id="worklistWrap">
       <div class="sec-h" id="wlTitle">Jouw werklijst</div>
@@ -2570,7 +2596,85 @@ function applyRoleCopy(){
     if(ws) ws.textContent = 'Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.';
   }
 }
-function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); }
+function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); renderCalendar(); }
+
+/* ---------- AGENDA / MAANDKALENDER (Vandaag-tab) ---------- */
+let calYM = null, calSel = null;
+const CAL_MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const _pad2 = n=> String(n).padStart(2,'0');
+/* map dateISO -> {fup:[leads], dm:[leads]}  (follow-ups op due-datum, eerste DM's op vandaag) */
+function calTasks(){
+  const map = {}, t = todayISO();
+  const push=(d,kind,l)=>{ (map[d]=map[d]||{fup:[],dm:[]})[kind].push(l); };
+  visibleLeads().forEach(l=>{
+    if(['dead','booked','c_booked'].includes(l.phase)) return;
+    const appr = l.flags && l.flags.approached;
+    if(!appr){ push(t,'dm',l); return; }            // eerste DM nog te versturen → vandaag
+    if(l.due) push(l.due.slice(0,10),'fup',l);       // geplande follow-up → op due-datum
+  });
+  return map;
+}
+function renderCalendar(){
+  const wrap = document.getElementById('calWrap'); if(!wrap) return;
+  const now = new Date();
+  if(!calYM) calYM = {y:now.getFullYear(), m:now.getMonth()};
+  const {y,m} = calYM;
+  const map = calTasks(), tISO = todayISO();
+  const startDow = (new Date(y,m,1).getDay()+6)%7;   // maandag = 0
+  const daysIn = new Date(y,m+1,0).getDate();
+  const dow = ['ma','di','wo','do','vr','za','zo'];
+  let cells = '';
+  for(let i=0;i<startDow;i++) cells += `<div class="calcell empty"></div>`;
+  let monthTot = 0;
+  for(let d=1; d<=daysIn; d++){
+    const iso = `${y}-${_pad2(m+1)}-${_pad2(d)}`;
+    const data = map[iso] || {fup:[],dm:[]};
+    const nf = data.fup.length, nd = data.dm.length, tot = nf+nd;
+    monthTot += tot;
+    const overdue = iso < tISO && nf>0;              // achterstallige follow-ups
+    cells += `<div class="calcell${iso===tISO?' today':''}${iso<tISO?' past':''}${iso===calSel?' sel':''}" onclick="calPick('${iso}')">
+      <span class="cd">${d}</span>
+      ${tot?`<span class="cbadge${overdue?' od':''}">${tot}</span>`:''}
+      <span class="caldots">${nd?'<span class="cdot dm"></span>':''}${nf?'<span class="cdot fup"></span>':''}</span>
+    </div>`;
+  }
+  wrap.innerHTML = `
+    <div class="calhead">
+      <div class="sec-h" style="margin:0">📅 Agenda <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);font-weight:400">${CAL_MONTHS[m]} ${y} · ${monthTot} taken</span></div>
+      <div class="calnav"><button onclick="calNav(-1)">‹</button><button onclick="calToday()">vandaag</button><button onclick="calNav(1)">›</button></div>
+    </div>
+    <div class="calgrid head">${dow.map(x=>`<div class="caldow">${x}</div>`).join('')}</div>
+    <div class="calgrid">${cells}</div>
+    <div class="calleg"><span><span class="cdot dm"></span> eerste DM</span><span><span class="cdot fup"></span> follow-up</span><span><span class="cbadge od" style="position:static;padding:0 6px">!</span> achterstallig</span></div>
+    <div class="calday" id="calDay"></div>`;
+  renderCalDay();
+}
+function renderCalDay(){
+  const box = document.getElementById('calDay'); if(!box) return;
+  if(!calSel){ box.innerHTML = `<div class="sec-sub" style="margin-top:12px">Klik een dag voor de taken van die dag.</div>`; return; }
+  const data = (calTasks()[calSel]) || {fup:[],dm:[]};
+  const [Y,M,D] = calSel.split('-');
+  const head = `<div class="sec-h" style="font-size:15px">${parseInt(D)} ${CAL_MONTHS[parseInt(M)-1]} — ${data.dm.length} eerste DM · ${data.fup.length} follow-up</div>`;
+  const row = (l,kind)=>{
+    const acc = l.account ? `@${esc(l.account)}` : '';
+    const vb = l.variant ? `<span class="vbadge ${l.variant}" style="margin-left:6px">Var ${l.variant}</span>` : '';
+    const tag = kind==='dm' ? '<span class="cdot dm"></span> eerste DM' : `<span class="cdot fup"></span> FUP ${(l.fups||0)+1}`;
+    return `<div class="lead" style="cursor:pointer;margin:8px 0" onclick="openLead('${l.id}')">
+      <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(naamloos)')}${vb}
+        <span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></div>
+      <div class="lm" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px">${tag}${acc?' · '+acc:''}</div>
+    </div>`;
+  };
+  const all = data.dm.map(l=>row(l,'dm')).concat(data.fup.map(l=>row(l,'fup'))).join('');
+  box.innerHTML = head + (all || `<div class="sec-sub" style="margin-top:8px">Geen taken op deze dag.</div>`);
+}
+function calPick(iso){ calSel = (calSel===iso ? null : iso); renderCalendar(); }
+function calToday(){ const n=new Date(); calYM={y:n.getFullYear(), m:n.getMonth()}; calSel=todayISO(); renderCalendar(); }
+function calNav(step){
+  let {y,m} = calYM || {y:new Date().getFullYear(), m:new Date().getMonth()};
+  m += step; if(m<0){ m=11; y--; } else if(m>11){ m=0; y++; }
+  calYM = {y,m}; renderCalendar();
+}
 
 /* ---------- INFO / HUB tab ---------- */
 async function uploadResourceFile(field, inp){
