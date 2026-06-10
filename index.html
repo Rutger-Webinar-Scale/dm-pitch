@@ -1038,7 +1038,7 @@ function renderAccountSwitcher(){
 function initialScript(v, lang){
   const S = (state.scripts && state.scripts[lang||state.lang]) || {};
   const key = initialKey(v);
-  return {text:S[key]||'', gif:S['gif_'+key]||''};
+  return {text:S[key]||'', gif:S['gif_'+key]||'', link:S['link_'+key]||''};
 }
 /* round-robin: hand the next lead the least-used active variant */
 function assignVariant(){
@@ -1455,6 +1455,10 @@ function sendRowHTML(l){
           ? `<div class="step-script"><span class="qscript-text">${txt}</span>
                <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${txt.replace(/"/g,'&quot;')}">Kopieer</button></div>`
           : `<div class="step-script empty-script">Nog geen openingsscript — voeg toe in de Scripts-tab.</div>` }
+      ${ iv.link
+          ? `<div class="step-script" style="margin-top:8px"><a class="link" href="${esc(iv.link)}" target="_blank" rel="noopener" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(iv.link)} ↗</a>
+               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(iv.link).replace(/"/g,'&quot;')}">Kopieer link</button></div>`
+          : '' }
       ${assetBtnsHTML(l, {initial:true})}
     </div>
   </div>`;
@@ -1898,7 +1902,11 @@ function buildScriptBlocks(){
   let initHtml = `<div class="meta">Eerste DM — de belangrijkste stimulus. Krijg een 👍 vóór je pitcht. <code>{{first.name}}</code> = de naam van de lead.</div>`;
   activeVariants().forEach(v=>{
     const d = initDefaults[v]||["",""];
-    initHtml += `<div class="vedithead">Variant ${v}</div>` + blockHTML('Openingsbericht · variant '+v, initialKey(v), d[0], d[1], true);
+    const k = initialKey(v);
+    initHtml += `<div class="vedithead">Variant ${v}</div>`
+      + blockHTML('Openingsbericht · variant '+v, k, d[0], d[1], true)
+      + `<div class="fupblock"><span class="tag">Link · variant ${v}</span>`
+      + `<input class="f" type="url" data-script="link_${k}" placeholder="https://… (optionele test-link voor deze variant)"></div>`;
   });
   document.getElementById('initialBlock').innerHTML = initHtml;
   // INTENT
@@ -1949,7 +1957,7 @@ function loadScriptValues(){
   document.querySelectorAll('[data-script]').forEach(t=>{
     const key=t.dataset.script;
     t.value = s[key]||'';
-    t.placeholder = '';
+    if(t.tagName==='TEXTAREA') t.placeholder = '';
   });
 }
 function setLang(l){
