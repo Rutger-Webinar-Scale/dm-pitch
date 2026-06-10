@@ -2602,22 +2602,54 @@ function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics();
 let calYM = null, calSel = null;
 const CAL_MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
 const _pad2 = n=> String(n).padStart(2,'0');
-/* map dateISO -> {fup:[leads], dm:[leads]}  (follow-ups op due-datum, eerste DM's op vandaag) */
+/* dagdoel eerste DM's (zoals de werklijst: ×aantal setters in monitor-modus) */
+function calGoal(){
+  const monitorMode = me && me.role==='owner' && setterFilter==='all';
+  return Math.max(1, state.goal * (monitorMode ? Math.max(1, team.filter(x=>x.role==='setter').length) : 1));
+}
+const _isoOf = d=> `${d.getFullYear()}-${_pad2(d.getMonth()+1)}-${_pad2(d.getDate())}`;
+/* map dateISO -> {fup:[leads], dm:[leads]}
+   follow-ups op hun due-datum; eerste DM's in dagbatches van calGoal():
+   vandaag = dagdoel + achterstand (gemiste werkdagen), daarna calGoal() per werkdag vooruit. */
 function calTasks(){
   const map = {}, t = todayISO();
-  const push=(d,kind,l)=>{ (map[d]=map[d]||{fup:[],dm:[]})[kind].push(l); };
-  visibleLeads().forEach(l=>{
+  const ensure = d=> (map[d] = map[d] || {fup:[],dm:[]});
+  const vis = visibleLeads();
+  // follow-ups op due-datum
+  vis.forEach(l=>{
     if(['dead','booked','c_booked'].includes(l.phase)) return;
-    const appr = l.flags && l.flags.approached;
-    if(!appr){ push(t,'dm',l); return; }            // eerste DM nog te versturen → vandaag
-    if(l.due) push(l.due.slice(0,10),'fup',l);       // geplande follow-up → op due-datum
+    if((l.flags && l.flags.approached) && l.due) ensure(l.due.slice(0,10)).fup.push(l);
   });
+  // eerste DM's = nog niet benaderde leads, verdeeld over de dagen
+  const fresh = vis.filter(l=> l.phase!=='dead' && !(l.flags && l.flags.approached));
+  const goal = calGoal();
+  // achterstand: opeenvolgende gemiste werkdagen (0 benaderd) terug vanaf gisteren
+  let missed = 0; const back = new Date();
+  for(let i=0;i<14;i++){
+    back.setDate(back.getDate()-1);
+    const w = back.getDay(); if(w===0||w===6) continue;       // weekend telt niet als gemist
+    if(vis.filter(l=> l.approachDate===_isoOf(back)).length===0) missed++; else break;
+  }
+  const appToday = vis.filter(l=> l.approachDate===t).length;
+  const todayQuota = Math.max(0, goal*(1+missed) - appToday);  // wat vandaag nog moet
+  let idx = 0;
+  const tc = ensure(t);
+  for(; idx<fresh.length && idx<todayQuota; idx++) tc.dm.push(fresh[idx]);
+  // rest vooruit: calGoal() per werkdag
+  const fut = new Date();
+  while(idx < fresh.length){
+    fut.setDate(fut.getDate()+1);
+    const w = fut.getDay(); if(w===0||w===6) continue;
+    const cell = ensure(_isoOf(fut));
+    for(let k=0;k<goal && idx<fresh.length;k++,idx++) cell.dm.push(fresh[idx]);
+  }
   return map;
 }
 function renderCalendar(){
   const wrap = document.getElementById('calWrap'); if(!wrap) return;
   const now = new Date();
   if(!calYM) calYM = {y:now.getFullYear(), m:now.getMonth()};
+  if(!calSel) calSel = todayISO();                  // altijd huidige dag geopend
   const {y,m} = calYM;
   const map = calTasks(), tISO = todayISO();
   const startDow = (new Date(y,m,1).getDay()+6)%7;   // maandag = 0
