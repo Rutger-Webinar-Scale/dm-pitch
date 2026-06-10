@@ -1038,7 +1038,7 @@ function renderAccountSwitcher(){
 function initialScript(v, lang){
   const S = (state.scripts && state.scripts[lang||state.lang]) || {};
   const key = initialKey(v);
-  return {text:S[key]||'', gif:S['gif_'+key]||'', link:S['link_'+key]||''};
+  return {text:S[key]||'', gif:S['gif_'+key]||''};
 }
 /* round-robin: hand the next lead the least-used active variant */
 function assignVariant(){
@@ -1455,10 +1455,6 @@ function sendRowHTML(l){
           ? `<div class="step-script"><span class="qscript-text">${txt}</span>
                <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${txt.replace(/"/g,'&quot;')}">Kopieer</button></div>`
           : `<div class="step-script empty-script">Nog geen openingsscript — voeg toe in de Scripts-tab.</div>` }
-      ${ iv.link
-          ? `<div class="step-script" style="margin-top:8px"><a class="link" href="${esc(iv.link)}" target="_blank" rel="noopener" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(iv.link)} ↗</a>
-               <button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(iv.link).replace(/"/g,'&quot;')}">Kopieer link</button></div>`
-          : '' }
       ${assetBtnsHTML(l, {initial:true})}
     </div>
   </div>`;
@@ -1666,7 +1662,9 @@ function assetBtnsHTML(l, step){
   const btn=(label,url)=> url ? `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">${label}</button>` : '';
   let h='';
   if(step.initial){
-    h += btn(`🎥 Initiële video ${flag}`,links['th_allround'+sfx]);
+    const vsfx = (l.variant && l.variant!=='A') ? '_'+l.variant : '';
+    const vlabel = (l.variant && l.variant!=='A') ? ` · var ${l.variant}` : '';
+    h += btn(`🎥 Initiële video${vlabel} ${flag}`, links['th_allround'+vsfx+sfx] || links['th_allround'+sfx]);
   }
   if(step.vsl){
     h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
@@ -1902,11 +1900,7 @@ function buildScriptBlocks(){
   let initHtml = `<div class="meta">Eerste DM — de belangrijkste stimulus. Krijg een 👍 vóór je pitcht. <code>{{first.name}}</code> = de naam van de lead.</div>`;
   activeVariants().forEach(v=>{
     const d = initDefaults[v]||["",""];
-    const k = initialKey(v);
-    initHtml += `<div class="vedithead">Variant ${v}</div>`
-      + blockHTML('Openingsbericht · variant '+v, k, d[0], d[1], true)
-      + `<div class="fupblock"><span class="tag">Link · variant ${v}</span>`
-      + `<input class="f" type="url" data-script="link_${k}" placeholder="https://… (optionele test-link voor deze variant)"></div>`;
+    initHtml += `<div class="vedithead">Variant ${v}</div>` + blockHTML('Openingsbericht · variant '+v, initialKey(v), d[0], d[1], true);
   });
   document.getElementById('initialBlock').innerHTML = initHtml;
   // INTENT
@@ -1957,7 +1951,7 @@ function loadScriptValues(){
   document.querySelectorAll('[data-script]').forEach(t=>{
     const key=t.dataset.script;
     t.value = s[key]||'';
-    if(t.tagName==='TEXTAREA') t.placeholder = '';
+    t.placeholder = '';
   });
 }
 function setLang(l){
@@ -2006,8 +2000,7 @@ function renderPlaybook(){
   const copyBtn = url=> `<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">Kopieer link</button>`;
   const stages = {initial:'', vsl:'', booking:''};
 
-  TOOLS.forEach(t=>{
-    const key = t.base + sfx;
+  const assetBlock = (t, key, name, desc)=>{
     const url = links[key]||'';
     let body='';
     if(t.type==='media'){
@@ -2031,11 +2024,26 @@ function renderPlaybook(){
           ${url?copyBtn(url):''}
         </div>`;
     }
-    stages[t.stage] += `<div class="fupblock">
-      <span class="tag">${flag} ${t.name}</span>
-      <div class="sd2" style="margin-bottom:2px">${t.desc}</div>
+    return `<div class="fupblock">
+      <span class="tag">${flag} ${name}</span>
+      <div class="sd2" style="margin-bottom:2px">${desc}</div>
       ${body}
     </div>`;
+  };
+
+  TOOLS.forEach(t=>{
+    // initiële video is A/B-testbaar: één videoveld per actieve variant
+    if(t.base==='th_allround'){
+      const vs = activeVariants();
+      vs.forEach(v=>{
+        const vk = 'th_allround' + (v==='A'?'':'_'+v) + sfx;
+        const name = vs.length>1 ? `${t.name} · variant ${v}` : t.name;
+        const desc = vs.length>1 ? `${t.desc}<br><b>Wordt getoond aan variant-${v}-leads.</b>${v!=='A'?' Leeg = valt terug op de video van variant A.':''}` : t.desc;
+        stages.initial += assetBlock(t, vk, name, desc);
+      });
+      return;
+    }
+    stages[t.stage] += assetBlock(t, t.base + sfx, t.name, t.desc);
   });
 
   ['initial','vsl','booking'].forEach(st=>{
