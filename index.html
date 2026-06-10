@@ -365,6 +365,7 @@
     <button class="tab" data-view="all">Leads <span class="count" id="cntAll">0</span></button>
     <button class="tab" data-view="scripts">Scripts</button>
     <button class="tab" data-view="stats">Cijfers</button>
+    <button class="tab" data-view="info">Info</button>
   </nav>
 
   <!-- ================= DASHBOARD ================= -->
@@ -510,6 +511,13 @@
         <div id="chatFups"></div>
       </div>
     </div>
+  </section>
+
+  <!-- ================= INFO / HUB ================= -->
+  <section class="view" id="view-info">
+    <div class="sec-h">Info &amp; toegang</div>
+    <div class="sec-sub">Handige spullen op één plek — IG-login, walkthrough en notities. Zichtbaar voor het hele team, automatisch gesynct.</div>
+    <div id="infoBody" style="margin-top:16px"></div>
   </section>
 
   <div class="footer">
@@ -839,7 +847,8 @@ async function loadCloud(){
   state.abVariants = (sh.abVariants && sh.abVariants.length) ? sh.abVariants : ['A','B'];
   state.goal       = sh.goal || 30;
   state.toolLinks  = sh.toolLinks || {};
-  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks) };
+  state.resources  = sh.resources || {};
+  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks), resources:JSON.stringify(state.resources) };
   const ud = (userRes.data && userRes.data.data) || {};
   state.lang          = ud.lang || 'nl';
   state.accounts      = (ud.accounts && ud.accounts.length) ? ud.accounts : [ (me.email||'account').split('@')[0].replace(/\./g,'') ];
@@ -869,7 +878,7 @@ async function syncNow(){
     if(dels.length){ const {error} = await sb.from('leads').delete().in('id', dels); if(error) throw error; }
     lastSync = cur;
     // shared team state
-    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}};
+    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}, resources:state.resources||{}};
     for(const k in sh){
       const j = JSON.stringify(sh[k]);
       if(sharedSnap[k] !== j){
@@ -2561,7 +2570,61 @@ function applyRoleCopy(){
     if(ws) ws.textContent = 'Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.';
   }
 }
-function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); }
+function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); }
+
+/* ---------- INFO / HUB tab ---------- */
+function renderInfo(){
+  const box=document.getElementById('infoBody'); if(!box) return;
+  const r=state.resources||{};
+  const copyBtn=v=> v?`<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(v).replace(/"/g,'&quot;')}">Kopieer</button>`:'';
+  const prev=embedHtml(r.walkthrough||'');
+  box.innerHTML=`
+  <div class="chain">
+    <div class="scard">
+      <h4><span class="phase-dot" style="background:var(--intent)"></span> 📲 Instagram-login</h4>
+      <div class="meta">Gedeeld account — log hiermee in op Instagram. Iedereen in het team ziet dit.</div>
+      <div class="fupblock"><span class="tag">E-mail</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:160px" data-res="igEmail" value="${esc(r.igEmail||'')}" placeholder="IG e-mail">
+          ${copyBtn(r.igEmail)}
+        </div>
+      </div>
+      <div class="fupblock"><span class="tag">Wachtwoord</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:160px" id="igpw" type="password" data-res="igPassword" value="${esc(r.igPassword||'')}" placeholder="IG wachtwoord">
+          <button class="btn ghost sm" onclick="var i=document.getElementById('igpw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Toon':'Verberg'">Toon</button>
+          ${copyBtn(r.igPassword)}
+        </div>
+      </div>
+    </div>
+    <div class="scard">
+      <h4><span class="phase-dot" style="background:var(--engaged)"></span> 🎬 Walkthrough-video</h4>
+      <div class="meta">Plak een Loom / YouTube / Drive / Vimeo-link — speelt hieronder af.</div>
+      ${prev?`<div style="margin:7px 0">${prev}</div>`:''}
+      <div class="fupblock"><span class="tag">Video-link</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:160px" data-res="walkthrough" value="${esc(r.walkthrough||'')}" placeholder="https://loom.com/share/…">
+          ${r.walkthrough?`<a class="link" href="${esc(r.walkthrough)}" target="_blank" rel="noopener">open ↗</a>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="scard">
+      <h4><span class="phase-dot" style="background:var(--signal)"></span> 📝 Notities &amp; links</h4>
+      <div class="meta">Vrije ruimte voor handleidingen, afspraken, losse links — wat je maar kwijt wilt.</div>
+      <div class="fupblock">
+        <textarea data-res="notes" style="min-height:160px" placeholder="Typ hier je notities, links, instructies…">${esc(r.notes||'')}</textarea>
+      </div>
+    </div>
+  </div>`;
+  box.querySelectorAll('[data-res]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      state.resources=state.resources||{};
+      state.resources[inp.dataset.res]=inp.value;
+      clearTimeout(inp._t); inp._t=setTimeout(()=>{ saveState(); },500);
+    });
+    if(inp.dataset.res==='walkthrough') inp.addEventListener('change',()=> renderInfo());
+  });
+}
 
 /* ---------- tabs ---------- */
 function switchView(v){
