@@ -2573,11 +2573,37 @@ function applyRoleCopy(){
 function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); }
 
 /* ---------- INFO / HUB tab ---------- */
+async function uploadResourceFile(field, inp){
+  const f = inp.files && inp.files[0]; if(!f) return;
+  if(f.size > 50*1024*1024){ alert('Direct uploaden kan tot 50 MB. Groter? Zet ’m op Google Drive / Notion en plak de link — die heeft geen limiet.'); return; }
+  const msg = document.getElementById('upmsg-'+field); if(msg) msg.textContent = 'Uploaden… 0–60 sec';
+  const ext = (f.name.split('.').pop()||'bin').toLowerCase();
+  const path = 'resource-'+field+'-'+Date.now()+'.'+ext;
+  const {error} = await sb.storage.from('assets').upload(path, f, {upsert:true, contentType:f.type||undefined});
+  if(error){ if(msg) msg.textContent=''; alert('Upload mislukt: '+error.message); return; }
+  const {data} = sb.storage.from('assets').getPublicUrl(path);
+  state.resources = state.resources||{};
+  state.resources[field] = data.publicUrl;
+  if(!state.resources[field+'Label']) state.resources[field+'Label'] = f.name;
+  saveState(); renderInfo();
+}
 function renderInfo(){
   const box=document.getElementById('infoBody'); if(!box) return;
   const r=state.resources||{};
   const copyBtn=v=> v?`<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(v).replace(/"/g,'&quot;')}">Kopieer</button>`:'';
   const prev=embedHtml(r.walkthrough||'');
+  const sopBlock=(n)=>{ const u=r['sop'+n]||''; return `
+      <div class="fupblock"><span class="tag">SOP ${n}</span>
+        <input class="gifinput" style="width:100%" data-res="sop${n}Label" value="${esc(r['sop'+n+'Label']||'')}" placeholder="Titel (bv. ${n===1?'Outreach-SOP':'Opvolg-SOP'})">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:160px" data-res="sop${n}" value="${esc(u)}" placeholder="Plak een Google Doc / Notion / Drive / PDF-link…">
+          <input type="file" accept=".pdf,.doc,.docx,.txt,.md,image/*" style="display:none" id="up-sop${n}" onchange="uploadResourceFile('sop${n}',this)">
+          <button class="btn ghost sm" onclick="document.getElementById('up-sop${n}').click()">⇪ ${u?'Vervang':'Upload'} <span style="opacity:.55">(&lt;50MB)</span></button>
+          <span class="sd2" id="upmsg-sop${n}"></span>
+          ${u?`<a class="link" href="${esc(u)}" target="_blank" rel="noopener">open ↗</a>`:''}
+          ${copyBtn(u)}
+        </div>
+      </div>`; };
   box.innerHTML=`
   <div class="chain">
     <div class="scard">
@@ -2596,6 +2622,12 @@ function renderInfo(){
           ${copyBtn(r.igPassword)}
         </div>
       </div>
+    </div>
+    <div class="scard">
+      <h4><span class="phase-dot" style="background:var(--booked)"></span> 📄 SOP's</h4>
+      <div class="meta">De twee SOP's van het systeem — plak een Google Doc / Notion / Drive / PDF-link of upload een bestand.</div>
+      ${sopBlock(1)}
+      ${sopBlock(2)}
     </div>
     <div class="scard">
       <h4><span class="phase-dot" style="background:var(--engaged)"></span> 🎬 Walkthrough-video</h4>
