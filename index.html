@@ -1212,7 +1212,7 @@ function renderDaily(){
   const cells = [
     {n: vis.filter(l=> l.phase==='c_convo' || l.phase==='engaged').length, lbl:'Actieve gesprekken'},
     {n: vis.filter(l=> l.approachDate===t).length, lbl:'DM’s verstuurd (nieuw)'},
-    {n: vis.filter(l=> l.lastInbound===t).length, lbl:'DM’s ontvangen (inbound)'},
+    {n: vis.filter(l=> l.lastInbound===t).length, lbl:'DM’s ontvangen'},
     {n: vis.filter(l=> l.lastFupDate===t).length, lbl:'Follow-ups'},
     {n: vis.filter(l=> l.booksentDate===t).length, lbl:'Call voorgesteld'},
     {n: vis.filter(l=> l.bookedDate===t).length, lbl:'Geboekte calls'}
@@ -2683,22 +2683,17 @@ function renderCalendar(){
 }
 function renderCalDay(){
   const box = document.getElementById('calDay'); if(!box) return;
-  if(!calSel){ box.innerHTML = `<div class="sec-sub" style="margin-top:12px">Klik een dag voor de taken van die dag.</div>`; return; }
+  if(!calSel){ box.innerHTML = ''; return; }
   const data = (calTasks()[calSel]) || {fup:[],dm:[]};
   const [Y,M,D] = calSel.split('-');
-  const head = `<div class="sec-h" style="font-size:15px">${parseInt(D)} ${CAL_MONTHS[parseInt(M)-1]} — ${data.dm.length} eerste DM · ${data.fup.length} follow-up</div>`;
-  const row = (l,kind)=>{
-    const acc = l.account ? `@${esc(l.account)}` : '';
-    const vb = l.variant ? `<span class="vbadge ${l.variant}" style="margin-left:6px">Var ${l.variant}</span>` : '';
-    const tag = kind==='dm' ? '<span class="cdot dm"></span> eerste DM' : `<span class="cdot fup"></span> FUP ${(l.fups||0)+1}`;
-    return `<div class="lead" style="cursor:pointer;margin:8px 0" onclick="openLead('${l.id}')">
-      <div class="ln" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">${esc(l.name||'(naamloos)')}${vb}
-        <span class="plat" style="border-color:${PHASES[l.phase].color};color:${PHASES[l.phase].color}">${PHASES[l.phase].label}</span></div>
-      <div class="lm" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px">${tag}${acc?' · '+acc:''}</div>
-    </div>`;
-  };
-  const all = data.dm.map(l=>row(l,'dm')).concat(data.fup.map(l=>row(l,'fup'))).join('');
-  box.innerHTML = head + (all || `<div class="sec-sub" style="margin-top:8px">Geen taken op deze dag.</div>`);
+  const isToday = calSel===todayISO();
+  const head = `<div class="sec-h" style="font-size:15px;margin-top:20px">📋 Werklijst — ${parseInt(D)} ${CAL_MONTHS[parseInt(M)-1]}${isToday?' · vandaag':''}
+    <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400">${data.dm.length} eerste DM · ${data.fup.length} follow-up</span></div>`;
+  // volledige werklijst-rijen: eerste DM's (sendRowHTML) + follow-ups (dueRowHTML)
+  const rows = data.dm.map(l=>sendRowHTML(l)).concat(data.fup.map(l=>dueRowHTML(l))).join('');
+  box.innerHTML = head + (rows
+    ? `<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">${rows}</div>`
+    : `<div class="sec-sub" style="margin-top:8px">Geen taken op deze dag. 🎉</div>`);
 }
 function calPick(iso){ calSel = (calSel===iso ? null : iso); renderCalendar(); }
 function calToday(){ const n=new Date(); calYM={y:n.getFullYear(), m:n.getMonth()}; calSel=todayISO(); renderCalendar(); }
