@@ -2728,6 +2728,21 @@ function renderInfo(){
   const r=state.resources||{};
   const copyBtn=v=> v?`<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(v).replace(/"/g,'&quot;')}">Kopieer</button>`:'';
   const prev=embedHtml(r.walkthrough||'');
+  const igBlock=(p,defLabel)=>{ const em=r[p+'Email']||'', pw=r[p+'Password']||''; return `
+      <div class="fupblock" style="border-top:1px solid var(--line);padding-top:12px">
+        <input class="gifinput" style="width:100%;margin-bottom:8px;font-weight:700" data-res="${p}Label" value="${esc(r[p+'Label']||defLabel||'')}" placeholder="Account-naam (bv. @rutger.kreulen)">
+        <span class="tag">E-mail / gebruikersnaam</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0">
+          <input class="gifinput" style="flex:1;min-width:160px" data-res="${p}Email" value="${esc(em)}" placeholder="IG e-mail of @gebruikersnaam">
+          ${copyBtn(em)}
+        </div>
+        <span class="tag">Wachtwoord</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <input class="gifinput" style="flex:1;min-width:160px" id="pw-${p}" type="password" data-res="${p}Password" value="${esc(pw)}" placeholder="IG wachtwoord">
+          <button class="btn ghost sm" onclick="var i=document.getElementById('pw-${p}');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Toon':'Verberg'">Toon</button>
+          ${copyBtn(pw)}
+        </div>
+      </div>`; };
   const linkVid=(key,tag,ph,withTitle)=>{ const u=r[key]||''; const pv=embedHtml(u); return `
       <div class="fupblock"><span class="tag">${tag}</span>
         ${withTitle?`<input class="gifinput" style="width:100%;margin-bottom:6px" data-res="${key}Label" value="${esc(r[key+'Label']||'')}" placeholder="Titel (optioneel)">`:''}
@@ -2741,21 +2756,10 @@ function renderInfo(){
   box.innerHTML=`
   <div class="chain">
     <div class="scard">
-      <h4><span class="phase-dot" style="background:var(--intent)"></span> 📲 Instagram-login</h4>
-      <div class="meta">Gedeeld account — log hiermee in op Instagram. Iedereen in het team ziet dit.</div>
-      <div class="fupblock"><span class="tag">E-mail</span>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
-          <input class="gifinput" style="flex:1;min-width:160px" data-res="igEmail" value="${esc(r.igEmail||'')}" placeholder="IG e-mail">
-          ${copyBtn(r.igEmail)}
-        </div>
-      </div>
-      <div class="fupblock"><span class="tag">Wachtwoord</span>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
-          <input class="gifinput" style="flex:1;min-width:160px" id="igpw" type="password" data-res="igPassword" value="${esc(r.igPassword||'')}" placeholder="IG wachtwoord">
-          <button class="btn ghost sm" onclick="var i=document.getElementById('igpw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Toon':'Verberg'">Toon</button>
-          ${copyBtn(r.igPassword)}
-        </div>
-      </div>
+      <h4><span class="phase-dot" style="background:var(--intent)"></span> 📲 Instagram-logins</h4>
+      <div class="meta">De IG-accounts waarmee het team werkt — log hiermee in op Instagram. Iedereen in het team ziet dit.</div>
+      ${igBlock('ig','')}
+      ${igBlock('ig2','@rutger.kreulen')}
     </div>
     <div class="scard">
       <h4><span class="phase-dot" style="background:var(--booked)"></span> 🎓 Outbound trainingen</h4>
