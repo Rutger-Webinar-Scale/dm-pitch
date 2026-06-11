@@ -2709,6 +2709,15 @@ function calNav(step){
 }
 
 /* ---------- INFO / HUB tab ---------- */
+function copyValFrom(btn, id){
+  const el = document.getElementById(id); if(!el) return;
+  const ta = document.createElement('textarea'); ta.value = el.value||'';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  const old = btn.textContent; btn.textContent='Gekopieerd'; btn.classList.add('sig');
+  setTimeout(()=>{ btn.textContent=old; btn.classList.remove('sig'); },1100);
+}
 async function uploadResourceFile(field, inp){
   const f = inp.files && inp.files[0]; if(!f) return;
   if(f.size > 50*1024*1024){ alert('Direct uploaden kan tot 50 MB. Groter? Zet ’m op Google Drive / Notion en plak de link — die heeft geen limiet.'); return; }
@@ -2733,14 +2742,14 @@ function renderInfo(){
         <input class="gifinput" style="width:100%;margin-bottom:8px;font-weight:700" data-res="${p}Label" value="${esc(r[p+'Label']||defLabel||'')}" placeholder="Account-naam (bv. @rutger.kreulen)">
         <span class="tag">E-mail / gebruikersnaam</span>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0">
-          <input class="gifinput" style="flex:1;min-width:160px" data-res="${p}Email" value="${esc(em)}" placeholder="IG e-mail of @gebruikersnaam">
-          ${copyBtn(em)}
+          <input class="gifinput" style="flex:1;min-width:160px" id="em-${p}" data-res="${p}Email" value="${esc(em)}" placeholder="IG e-mail of @gebruikersnaam">
+          <button class="btn ghost sm" onclick="copyValFrom(this,'em-${p}')">Kopieer</button>
         </div>
         <span class="tag">Wachtwoord</span>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
           <input class="gifinput" style="flex:1;min-width:160px" id="pw-${p}" type="password" data-res="${p}Password" value="${esc(pw)}" placeholder="IG wachtwoord">
           <button class="btn ghost sm" onclick="var i=document.getElementById('pw-${p}');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Toon':'Verberg'">Toon</button>
-          ${copyBtn(pw)}
+          <button class="btn ghost sm" onclick="copyValFrom(this,'pw-${p}')">Kopieer</button>
         </div>
       </div>`; };
   const linkVid=(key,tag,ph,withTitle)=>{ const u=r[key]||''; const pv=embedHtml(u); return `
