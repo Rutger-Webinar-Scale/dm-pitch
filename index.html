@@ -2139,7 +2139,8 @@ function openImport(){
   document.getElementById('impPreview').innerHTML='';
   document.getElementById('impMap').innerHTML='';
   importStaged=[]; importMatrix=[]; importHeader=null; importMap={name:0,username:-1,link:-1,phase:-1,lang:-1,account:-1};
-  impAccount = (state.activeAccount && state.activeAccount!=='all') ? state.activeAccount : accounts()[0];
+  impAccount = (state.activeAccount && state.activeAccount!=='all') ? state.activeAccount
+             : (accounts().length>1 ? '__rr__' : accounts()[0]);
   renderImpAcctToggle();
   setImpLang(impDefLang);
   updateImpCount();
@@ -2168,7 +2169,9 @@ function setImpLang(l){
 let impAccount = '';     // account these imported leads belong to
 function renderImpAcctToggle(){
   const box=document.getElementById('impAcctToggle'); if(!box) return;
-  box.innerHTML = accounts().map(a=>`<button class="lang-btn ${impAccount===a?'active':''}" onclick="setImpAccount('${esc(a)}')">@${esc(a)}</button>`).join('');
+  const rr = accounts().length>1
+    ? `<button class="lang-btn ${impAccount==='__rr__'?'active':''}" onclick="setImpAccount('__rr__')">🔀 Verdeel over alle</button>` : '';
+  box.innerHTML = rr + accounts().map(a=>`<button class="lang-btn ${impAccount===a?'active':''}" onclick="setImpAccount('${esc(a)}')">@${esc(a)}</button>`).join('');
 }
 function setImpAccount(a){
   impAccount = a;
@@ -2309,7 +2312,7 @@ function isDup(r){
 
 /* build staged leads from the matrix + current mapping */
 function applyMapping(){
-  importStaged = importMatrix.map(r=>{
+  importStaged = importMatrix.map((r,idx)=>{
     const name = (r[importMap.name]||'').trim();
     const username = importMap.username>=0 ? (r[importMap.username]||'').trim() : '';
     const link = importMap.link>=0 ? (r[importMap.link]||'').trim() : '';
@@ -2317,7 +2320,8 @@ function applyMapping(){
     if(importMap.phase>=0){ const p = PHASE_ALIASES[(r[importMap.phase]||'').toLowerCase()]; if(p) phase=p; }
     const lang = (importMap.lang>=0 ? normLang(r[importMap.lang]||'') : '') || impDefLang;
     const acctRaw = importMap.account>=0 ? (r[importMap.account]||'').trim() : '';
-    const account = acctRaw ? (accounts().find(a=>a.toLowerCase()===acctRaw.toLowerCase().replace(/^@/,'')) || acctRaw.replace(/^@/,'')) : (impAccount||accounts()[0]);
+    const account = acctRaw ? (accounts().find(a=>a.toLowerCase()===acctRaw.toLowerCase().replace(/^@/,'')) || acctRaw.replace(/^@/,''))
+                  : (impAccount==='__rr__' ? accounts()[idx % accounts().length] : (impAccount||accounts()[0]));
     return deriveIg({name, username, platform:'Instagram', link, phase, lang, account, flags:phaseFlags(phase)});
   }).filter(r=>r.name);
   showPreview();
@@ -2366,7 +2370,8 @@ function runImport(){
     stampFlagDates(lead);
     state.leads.push(lead); added++;
   });
-  if(impAccount) state.activeAccount = impAccount;   // jump to the account you just imported into
+  if(impAccount && impAccount!=='__rr__') state.activeAccount = impAccount;   // jump to the account you just imported into
+  else if(impAccount==='__rr__') state.activeAccount = 'all';   // verdeeld → toon alle accounts
   saveState(); closeImport(); renderAll();
   switchView('dash');
   setTimeout(()=>alert(`${added} nieuwe lead${added===1?'':'s'} geïmporteerd`+(skipped?`, ${skipped} overgeslagen (bestonden al)`:'')+`.\nNieuwe leads staan in "Eerste DM" — verstuur de eerste DM en markeer als verstuurd.`),100);
