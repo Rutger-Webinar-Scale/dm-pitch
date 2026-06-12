@@ -2138,7 +2138,7 @@ function openImport(){
   document.getElementById('csvName').textContent='';
   document.getElementById('impPreview').innerHTML='';
   document.getElementById('impMap').innerHTML='';
-  importStaged=[]; importMatrix=[]; importHeader=null; importMap={name:0,username:-1,link:-1,phase:-1,lang:-1};
+  importStaged=[]; importMatrix=[]; importHeader=null; importMap={name:0,username:-1,link:-1,phase:-1,lang:-1,account:-1};
   impAccount = (state.activeAccount && state.activeAccount!=='all') ? state.activeAccount : accounts()[0];
   renderImpAcctToggle();
   setImpLang(impDefLang);
@@ -2183,7 +2183,7 @@ function looksLink(s){ return /\.(com|net|io|nl|co|org)/i.test(s) || s.includes(
 /* ---- column model: parse raw text into a matrix, auto-detect mapping, allow override ---- */
 let importMatrix = [];   // rows of cells (data rows only, header stripped)
 let importHeader = null; // array of header labels, or null
-let importMap = {name:0, username:-1, link:-1, phase:-1};
+let importMap = {name:0, username:-1, link:-1, phase:-1, lang:-1, account:-1};
 
 const HEADER_WORDS = ['name','naam','first','voornaam','contact','full','user','username','handle','gebruikersnaam',
   'link','url','profile','profiel','insta','instagram','account','ig','phase','stage','status','fase','email','mail',
@@ -2240,21 +2240,23 @@ function autoGuessMap(){
   const h = importHeader;
   const byHeader = (names)=> h ? h.findIndex(x=> names.some(n=> x.toLowerCase().includes(n))) : -1;
   let name  = byHeader(['name','naam','voornaam','first','contact','full']);
-  let user  = byHeader(['username','handle','gebruikersnaam','user','account','ig']);
+  let acct  = byHeader(['account','acct','vanaf']);
+  let user  = byHeader(['username','handle','gebruikersnaam','user','ig']);
   let link  = byHeader(['link','url','profile','profiel','instagram','insta']);
   let phase = byHeader(['phase','stage','status','fase']);
   let lang  = byHeader(['language','taal','lang']);
+  if(user===acct) user=-1;   // don't let an Account column double as username
   const looksHandle = v => v && !/\s/.test(v) && (/^@/.test(v) || (!looksLink(v) && /^[a-z0-9._]+$/i.test(v)));
   // content fallbacks when no header match
-  if(link<0){ for(let c=0;c<cols;c++){ if(c===name||c===user) continue; if(importMatrix.some(r=>looksLink(r[c]||''))){ link=c; break; } } }
-  if(user<0){ for(let c=0;c<cols;c++){ if(c===name||c===link) continue; if(importMatrix.some(r=>looksHandle((r[c]||'').trim()))){ user=c; break; } } }
+  if(link<0){ for(let c=0;c<cols;c++){ if(c===name||c===user||c===acct) continue; if(importMatrix.some(r=>looksLink(r[c]||''))){ link=c; break; } } }
+  if(user<0){ for(let c=0;c<cols;c++){ if(c===name||c===link||c===acct) continue; if(importMatrix.some(r=>looksHandle((r[c]||'').trim()))){ user=c; break; } } }
   if(name<0){ // first column that isn't link/username and reads like a name (has spaces or letters)
-    for(let c=0;c<cols;c++){ if(c===link||c===user) continue; if(!importMatrix.every(r=>looksLink(r[c]||''))){ name=c; break; } }
+    for(let c=0;c<cols;c++){ if(c===link||c===user||c===acct) continue; if(!importMatrix.every(r=>looksLink(r[c]||''))){ name=c; break; } }
     if(name<0) name=0;
   }
   // content fallback for language: a column whose values read as nl/en
-  if(lang<0){ for(let c=0;c<cols;c++){ if(c===name||c===user||c===link||c===phase) continue; if(importMatrix.some(r=>normLang(r[c]||''))){ lang=c; break; } } }
-  importMap = {name, username:user, link, phase, lang};
+  if(lang<0){ for(let c=0;c<cols;c++){ if(c===name||c===user||c===link||c===phase||c===acct) continue; if(importMatrix.some(r=>normLang(r[c]||''))){ lang=c; break; } } }
+  importMap = {name, username:user, link, phase, lang, account:acct};
 }
 
 function colLabel(c){
@@ -2280,6 +2282,7 @@ function renderMapping(){
       <label class="f">Instagram-link<select class="f mapsel" data-map="link">${opt(importMap.link,true)}</select></label>
       <label class="f">Fase (optioneel)<select class="f mapsel" data-map="phase">${opt(importMap.phase,true)}</select></label>
       <label class="f">Taal (optioneel)<select class="f mapsel" data-map="lang">${opt(importMap.lang,true)}</select></label>
+      <label class="f">Account (optioneel)<select class="f mapsel" data-map="account">${opt(importMap.account,true)}</select></label>
     </div>
     <div class="mapnote">Automatisch herkend. Klopt het niet? Kies de juiste kolom. Link/Fase/Taal mogen "geen" zijn — leads zonder taal krijgen de standaardtaal hierboven (per lead later om te zetten).</div>`;
   box.querySelectorAll('.mapsel').forEach(s=> s.addEventListener('change', ()=>{
@@ -2313,7 +2316,9 @@ function applyMapping(){
     let phase = 'intent';
     if(importMap.phase>=0){ const p = PHASE_ALIASES[(r[importMap.phase]||'').toLowerCase()]; if(p) phase=p; }
     const lang = (importMap.lang>=0 ? normLang(r[importMap.lang]||'') : '') || impDefLang;
-    return deriveIg({name, username, platform:'Instagram', link, phase, lang, account:impAccount||accounts()[0], flags:phaseFlags(phase)});
+    const acctRaw = importMap.account>=0 ? (r[importMap.account]||'').trim() : '';
+    const account = acctRaw ? (accounts().find(a=>a.toLowerCase()===acctRaw.toLowerCase().replace(/^@/,'')) || acctRaw.replace(/^@/,'')) : (impAccount||accounts()[0]);
+    return deriveIg({name, username, platform:'Instagram', link, phase, lang, account, flags:phaseFlags(phase)});
   }).filter(r=>r.name);
   showPreview();
 }
@@ -2330,6 +2335,7 @@ function showPreview(){
       ${r.username?`<span style="font-family:'Space Mono';font-size:10px;color:var(--signal)">@${esc(r.username)}</span>`:''}
       <span class="plat" style="border-color:${PHASES[r.phase].color};color:${PHASES[r.phase].color}">${PHASES[r.phase].label}</span>
       <span class="plat">${r.lang==='en'?'🇬🇧 EN':'🇳🇱 NL'}</span>
+      ${r.account?`<span class="plat" title="Outreach-account">📤 @${esc(r.account)}</span>`:''}
       ${r.link?`<span style="font-family:'Space Mono';font-size:9px;color:var(--muted)">${esc(r.link).slice(0,28)}</span>`:''}</div>`;
   });
   html += '</div>';
