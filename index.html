@@ -96,9 +96,10 @@
 
   /* ---- pipeline board ---- */
   .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}
+  .board.cols4{grid-template-columns:repeat(4,1fr);gap:12px}
   .board.cols5{grid-template-columns:repeat(5,1fr);gap:12px}
-  @media(max-width:1150px){.board.cols5{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:900px){.board,.board.cols5{grid-template-columns:1fr}}
+  @media(max-width:1150px){.board.cols4,.board.cols5{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:900px){.board,.board.cols4,.board.cols5{grid-template-columns:1fr}}
   .col{background:var(--paper-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;min-height:200px}
   .col-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .col-h .name{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:8px}
@@ -154,7 +155,8 @@
   .step[data-ph="intent"].on,.step[data-ph="c_new"].on{background:var(--intent);border-color:var(--intent)}
   .step[data-ph="engaged"].on,.step[data-ph="c_convo"].on{background:var(--engaged);border-color:var(--engaged)}
   .step[data-ph="c_call"].on{background:var(--signal);border-color:var(--signal)}
-  .step[data-ph="booked"].on,.step[data-ph="c_booked"].on{background:var(--booked);border-color:var(--booked)}
+  .step[data-ph="met"].on,.step[data-ph="c_booked"].on{background:var(--booked);border-color:var(--booked)}
+  .step[data-ph="booked"].on{background:var(--signal);border-color:var(--signal)}
   .step[data-ph="dead"].on,.step[data-ph="c_closed"].on{background:var(--muted);border-color:var(--muted)}
   .stale{font-family:'Space Mono',monospace;font-size:9px;background:var(--bad);color:#fff;border-radius:20px;padding:2px 7px;font-weight:700}
   .daily{display:flex;gap:0;background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-bottom:20px;overflow:hidden;flex-wrap:wrap;box-shadow:var(--shadow)}
@@ -603,7 +605,10 @@
           <label class="f">Laatste berichtdatum</label>
           <input class="f" id="f-lastmsg" type="date">
         </div>
-        <div></div>
+        <div>
+          <label class="f">Datum geboekte call</label>
+          <input class="f" id="f-calldate" type="date">
+        </div>
       </div>
 
       <div class="grid2">
@@ -762,7 +767,8 @@ const PHASES = {
   // ---- VSL funnel ----
   intent:  {label:'Intent',        color:'var(--intent)',  maxFup:3, funnel:'video', desc:'Nog geen reactie · max 3 follow-ups'},
   engaged: {label:'Geïnteresseerd',color:'var(--engaged)', maxFup:8, funnel:'video', desc:'Interesse getoond · tot 8 follow-ups'},
-  booked:  {label:'Geboekt',       color:'var(--booked)',  maxFup:8, funnel:'video', desc:'Bookinglink gestuurd · alles wijst naar de agenda'},
+  booked:  {label:'Booking gestuurd',color:'var(--signal)', maxFup:8, funnel:'video', desc:'Agendalink gestuurd · chase tot de call staat'},
+  met:     {label:'Afspraak geboekt',color:'var(--booked)', maxFup:0, funnel:'video', desc:'Call staat in de agenda'},
   dead:    {label:'Afgesloten',    color:'var(--muted)',   maxFup:0, funnel:'video', desc:'Gesloten · later opnieuw bekijken'},
   // ---- chat funnel (gesprek-aanpak, fase 1-5) ----
   c_new:   {label:'1 · Nieuwe lead',     color:'var(--intent)',  maxFup:3,  funnel:'chat', desc:'Opening gestuurd · wacht op reactie'},
@@ -801,6 +807,7 @@ const KPIS = [
 const TOOLS = [
   {base:'th_allround',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video',                desc:'Een voorbeeld voor de vibe — stuur je vanaf Rutgers account (@rutgerkreulen / @rutger.kreulen), dan mag je deze video gebruiken'},
   {base:'video',         stage:'vsl',     type:'link',  tool:'Loom',              name:'Evergreen VSL',                 desc:'Link naar de evergreen VSL'},
+  {base:'training',      stage:'vsl',     type:'link',  tool:'training',          name:'Training',                      desc:'Link naar de training'},
   {base:'vn_vsl',        stage:'vsl',     type:'media', accept:'audio/*',         name:'Voice-note bij VSL',            desc:'Pro-tip: stuur als spraakmemo — converteert beter. Houd de speaker bij de IG voice-note zodat hij als voice-note verstuurd wordt — verstuur dus niet de mp3 zelf. Ben je onderweg? Stuur dan zo snel mogelijk een tekstbericht.'},
   {base:'booking',       stage:'booking', type:'link',  tool:'iClosed',           name:'Calendar link',                 desc:'De agendalink voor deze taal'},
   {base:'vn_booking',    stage:'booking', type:'media', accept:'audio/*',         name:'Voice-note bij calendar link',  desc:'Pro-tip: stuur als spraakmemo — converteert beter. Houd de speaker bij de IG voice-note zodat hij als voice-note verstuurd wordt — verstuur dus niet de mp3 zelf.'}
@@ -865,6 +872,8 @@ async function loadCloud(){
   ]);
   if(leadsRes.error){ alert('Kon leads niet laden: '+leadsRes.error.message); throw leadsRes.error; }
   state.leads = (leadsRes.data||[]).map(r=>{ const l=r.data||{}; l.id=r.id; l._setter=r.setter_id; return l; });
+  // migratie: oude 'Geboekt'-fase = echte afspraak → nieuwe fase 'met' (idempotent)
+  state.leads.forEach(l=>{ if(l.phase==='booked' && l.flags && l.flags.booked){ l.phase='met'; l.due=''; } });
   lastSync = {}; state.leads.forEach(l=>{ lastSync[l.id] = JSON.stringify(stripPrivate(l)); });
   const sh = {}; (sharedRes.data||[]).forEach(r=>sh[r.key]=r.value);
   state.scripts    = sh.scripts || {nl:{},en:{}};
@@ -1174,7 +1183,7 @@ function renderTeam(){
   let html='<div class="abgrid">';
   setters.forEach(p=>{
     const ls = state.leads.filter(l=> l._setter===p.id);
-    const active = l=> !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
+    const active = l=> !['dead','met','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
     const sent = ls.filter(l=> l.flags && l.flags.approached && l.approachDate===t).length;
     const late = ls.filter(l=> active(l) && ((l.due && l.due<nts) || (l.phase!=='c_closed' && staleDays(l)>=2 && (!l.due || l.due<=nts)))).length;
     const dueToday = ls.filter(l=> active(l) && l.due && l.due.slice(0,10)===t).length;
@@ -1304,7 +1313,8 @@ function renderBoard(){
   let html='';
   const vis = visibleLeads().filter(l=> leadFunnel(l)===activeFunnel);
   const cols = funnelPhases(activeFunnel).filter(ph=> ph!=='dead');
-  board.classList.toggle('cols5', cols.length>3);
+  board.classList.toggle('cols4', cols.length===4);
+  board.classList.toggle('cols5', cols.length>=5);
   cols.forEach(ph=>{
     const ls = vis.filter(l=>l.phase===ph);
     html += `<div class="col" data-phase="${ph}" ondragover="allowDrop(event)" ondragenter="event.preventDefault();this.classList.add('dragover')" ondragleave="if(event.target===this)this.classList.remove('dragover')" ondrop="dropLead(event,'${ph}')">
@@ -1348,8 +1358,13 @@ function moveLeadPhase(id, phase){
     l.fups = 0;
     l.due = nextFupDate(l.fups);
   } else if(phase==='booked'){
+    l.flags.approached = l.flags.seen = l.flags.positive = l.flags.booksent = true;
+    l.flags.booked = false;
+    l.fups = 0; l.due = nextFupDate(0);
+  } else if(phase==='met'){
     l.flags.approached = l.flags.seen = l.flags.positive = l.flags.booksent = l.flags.booked = true;
     l.fups = 0; l.due = '';
+    if(!l.callDate) askCallDate(l);
   } else if(phase==='intent'){
     l.flags.approached = true;        // it's in the board, so it's been sent
     if(!l.due) l.due = nextFupDate(l.fups);
@@ -1382,6 +1397,7 @@ function leadCardHTML(l){
     <div class="ln">${esc(l.name||'(naamloos)')} ${due}</div>
     <div class="lm">${funnelBadge(l)}
       ${l.username?`<span style="color:var(--signal)">@${esc(l.username)}</span>`:''}
+      ${l.phase==='met'&&l.callDate?`<span class="due later" title="Datum geboekte call">📅 ${esc(l.callDate)}</span>`:''}
       ${staleBadge(l)}
       ${convoLinkHTML(l)}
       ${(l.flags&&l.flags.approached)?`<span class="fupbadge">FUP ${l.fups||0}/${PHASES[l.phase].maxFup}</span>`:`<span class="due today">te sturen</span>`}</div>
@@ -1390,7 +1406,7 @@ function leadCardHTML(l){
   </div>`;
 }
 function dueBadge(l){
-  if(!l.due || l.phase==='dead' || l.phase==='booked' || l.phase==='c_booked') return '';
+  if(!l.due || l.phase==='dead' || l.phase==='met' || l.phase==='c_booked') return '';
   const now = nowISO();
   let cls='later', txt=fmtDue(l.due);
   if(l.due<=now){cls='today';txt='nu';}
@@ -1400,7 +1416,7 @@ function dueBadge(l){
 /* ⚠ alert: 2+ dagen geen bericht in een actieve fase → tijd voor follow-up */
 function staleBadge(l){
   if(!l.lastMsgDate) return '';
-  if(['dead','booked','c_booked','c_closed'].includes(l.phase)) return '';
+  if(['dead','met','c_booked','c_closed'].includes(l.phase)) return '';
   const d = Math.round((new Date(todayISO()) - new Date(l.lastMsgDate))/86400000);
   return d>=2 ? `<span class="stale" title="Laatste bericht: ${l.lastMsgDate}">⚠ ${d}d stil</span>` : '';
 }
@@ -1418,7 +1434,7 @@ function renderWorklist(){
   const t = todayISO();
   const nts = nowISO();
   const vis = visibleLeads();
-  const active = l=> !['dead','booked','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
+  const active = l=> !['dead','met','c_booked'].includes(l.phase) && l.flags && l.flags.approached;
   const staleDays = l=> l.lastMsgDate ? Math.round((new Date(t)-new Date(l.lastMsgDate))/86400000) : 0;
   const seen = new Set();
   const take = arr=> arr.filter(l=>{ if(seen.has(l.id)) return false; seen.add(l.id); return true; });
@@ -1550,8 +1566,8 @@ function toggleLeadFlag(id, flag){
   l.flags[flag] = turningOn;
   if(turningOn){
     // turning a flag on implies the earlier funnel steps happened + advances the phase
-    if(flag==='booked'){ l.flags.approached=l.flags.seen=l.flags.positive=l.flags.booksent=true; l.flags.negative=false; l.phase='booked'; l.fups=0; l.due=''; }
-    else if(flag==='booksent'){ l.flags.approached=l.flags.seen=l.flags.positive=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; } }
+    if(flag==='booked'){ l.flags.approached=l.flags.seen=l.flags.positive=l.flags.booksent=true; l.flags.negative=false; l.phase='met'; l.fups=0; l.due=''; askCallDate(l); }
+    else if(flag==='booksent'){ l.flags.approached=l.flags.seen=l.flags.positive=true; l.flags.negative=false; if(['intent','engaged','dead'].includes(l.phase)){ l.phase='booked'; l.fups=0; l.due=nextFupDate(0); } }
     else if(flag==='positive'){ l.flags.approached=l.flags.seen=true; l.flags.negative=false; if(l.phase==='intent'||l.phase==='dead'){ l.phase='engaged'; l.fups=0; l.due=nextFupDate(l.fups); } }
     else if(flag==='negative'){ l.flags.approached=l.flags.seen=true; l.flags.positive=l.flags.booksent=l.flags.booked=false; l.phase='dead'; l.due=''; if(!l.negativeDate) l.negativeDate=todayISO(); }
     else if(flag==='seen'){ l.flags.approached=true; }
@@ -1559,8 +1575,15 @@ function toggleLeadFlag(id, flag){
   } else {
     // turning a flag back off — undo the side-effects where it makes sense
     if(flag==='negative' && l.phase==='dead'){ l.phase = l.flags.positive?'engaged':'intent'; if(l.flags.approached && !l.due){ l.due=nextFupDate(l.fups); } }
+    if(flag==='booked' && l.phase==='met'){ l.phase='booked'; l.callDate=''; if(!l.due) l.due=nextFupDate(l.fups); }
   }
   saveState(); renderAll();
+}
+/* vraag de datum van de geboekte call (appointment-moment, los van vandaag) */
+function askCallDate(l){
+  const v = prompt('Datum van de geboekte call (JJJJ-MM-DD) — leeg laten mag:', l.callDate || todayISO());
+  if(v===null) return;                 // annuleren = laat ongemoeid
+  l.callDate = v.trim();
 }
 function quickFlagsHTML(l){
   if(leadFunnel(l)==='chat'){
@@ -1621,6 +1644,9 @@ function nextStep(l){
     if(f===0) return {tag:'Stuur het bookingbericht', detail:'Drop de agendalink', script:S.booking||'', gif:g('booking'), num:0, max:8, booking:true};
     if(f<=8) return {tag:`Booking FUP ${f} / 8`, detail:'Alles wijst naar de bookinglink', script:S['bfup'+f]||'(voeg B-FUP '+f+' toe in Scripts)', gif:g('bfup'+f), num:f, max:8, booking:true};
     return {tag:'Booking — limiet bereikt', detail:'', script:'', gif:'', num:f, max:8};
+  }
+  if(l.phase==='met'){
+    return {tag:'Afspraak geboekt'+(l.callDate?' — '+l.callDate:''), detail:'Call staat in de agenda · niets te doen', script:'', gif:'', num:0, max:0};
   }
   // ---- chat funnel ----
   if(l.phase==='c_new'){
@@ -1709,7 +1735,7 @@ function assetBtnsHTML(l, step){
     h += btn(`🎥 Initiële video${vlabel} ${flag}`, links['th_allround'+vsfx+sfx] || links['th_allround'+sfx]);
   }
   if(step.vsl){
-    h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
+    h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎓 Training ${flag}`,links['training'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
   }
   if(step.booking){
     h += btn(`📅 Calendar link ${flag}`,links['booking'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_booking'+sfx]);
@@ -1742,7 +1768,7 @@ function markReplied(id){
   if(l.phase==='intent'){
     l.phase='engaged'; l.flags=Object.assign({},l.flags,{seen:true,positive:true}); l.fups=0;
   } else if(l.phase==='engaged'){
-    l.phase='booked'; l.flags=Object.assign({},l.flags,{booksent:true,booked:true}); l.fups=0; l.due='';
+    l.phase='booked'; l.flags=Object.assign({},l.flags,{booksent:true}); l.fups=0; l.due=nextFupDate(0);
   }
   if(l.phase!=='booked'){ const d=new Date(); d.setDate(d.getDate()+1); l.due=d.toISOString().slice(0,10); }
   stampFlagDates(l);
@@ -1812,6 +1838,7 @@ function openLead(id){
   document.getElementById('f-due').value = l?.due ? (l.due.length>10 ? l.due : l.due+'T09:00') : '';
   document.getElementById('f-convo').value = l?.convoLink||'';
   document.getElementById('f-lastmsg').value = l?.lastMsgDate||'';
+  document.getElementById('f-calldate').value = l?.callDate||'';
   document.getElementById('f-funnel').value = l ? leadFunnel(l) : '';
   document.getElementById('f-lang').value = (l?.lang==='nl'||l?.lang==='en') ? l.lang : '';
   document.getElementById('f-variant').value = l?.variant||'';
@@ -1848,7 +1875,8 @@ function setPhase(ph, silent){
   if(!silent){
     if(ph==='engaged'||ph==='c_convo'){ modalFlags.seen = ph==='engaged'?true:modalFlags.seen; modalFlags.positive=true; }
     if(ph==='c_call'){ modalFlags.positive=true; modalFlags.booksent=true; }
-    if(ph==='booked'||ph==='c_booked'){ if(ph==='booked') modalFlags.seen=true; modalFlags.positive=true; modalFlags.booksent=true; modalFlags.booked=true; }
+    if(ph==='booked'){ modalFlags.seen=true; modalFlags.positive=true; modalFlags.booksent=true; }
+    if(ph==='met'||ph==='c_booked'){ if(ph==='met') modalFlags.seen=true; modalFlags.positive=true; modalFlags.booksent=true; modalFlags.booked=true; }
     renderFlags();
   }
 }
@@ -1883,6 +1911,7 @@ function saveLead(){
   if(chosenAcct) lead.account = chosenAcct;
   lead.convoLink = document.getElementById('f-convo').value.trim();
   lead.lastMsgDate = document.getElementById('f-lastmsg').value;
+  lead.callDate = document.getElementById('f-calldate').value;
   deriveIg(lead);
   if(modalPhase==='dead') lead.due='';
   if(editingId){
@@ -2155,7 +2184,7 @@ function impTab(t){
 
 const PLAT_ALIASES = {ig:'Instagram',insta:'Instagram',instagram:'Instagram'};
 const PHASE_ALIASES = {intent:'intent',cold:'intent',engaged:'engaged',interested:'engaged',
-  booked:'booked',dead:'dead',no:'dead'};
+  booksent:'booked',booked:'booked',met:'met',afspraak:'met',scheduled:'met',call:'met',dead:'dead',no:'dead'};
 const LANG_ALIASES = {nl:'nl',dutch:'nl',nederlands:'nl',ned:'nl',du:'nl',
   en:'en',english:'en',eng:'en',engels:'en'};
 function normLang(s){ if(!s) return ''; return LANG_ALIASES[s.toLowerCase().replace(/[^a-z]/g,'')]||''; }
@@ -2296,7 +2325,8 @@ function renderMapping(){
 /* flags for an imported lead — intent/dead start NOT approached (initial still to send) */
 function phaseFlags(phase){
   if(phase==='engaged') return {approached:true, seen:true, positive:true};
-  if(phase==='booked')  return {approached:true, seen:true, positive:true, booksent:true, booked:true};
+  if(phase==='booked')  return {approached:true, seen:true, positive:true, booksent:true};
+  if(phase==='met')     return {approached:true, seen:true, positive:true, booksent:true, booked:true};
   return {}; // intent / dead → first DM not sent yet
 }
 
@@ -2635,7 +2665,7 @@ function calTasks(){
   const vis = visibleLeads();
   // follow-ups op due-datum
   vis.forEach(l=>{
-    if(['dead','booked','c_booked'].includes(l.phase)) return;
+    if(['dead','met','c_booked'].includes(l.phase)) return;
     if((l.flags && l.flags.approached) && l.due) ensure(l.due.slice(0,10)).fup.push(l);
   });
   // eerste DM's = nog niet benaderde leads, verdeeld over de dagen
