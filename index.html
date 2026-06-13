@@ -964,12 +964,12 @@ const isWeekend = ()=>{ const d=new Date().getDay(); return d===0||d===6; };
 function nowISO(){ return toLocalISO(new Date()); }
 function toLocalISO(d){ const p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
-// houd een gepland moment binnen werkuren (06:00–22:00) en buiten het weekend
+// houd een gepland moment binnen werkuren (06:00–22:00); weekend mag —
+// follow-ups zijn snel & belangrijk, die wil je in het weekend juist wél oppakken
 const WAKE_START=6, WAKE_END=22;
 function clampSchedule(d){
   if(d.getHours()<WAKE_START){ d.setHours(WAKE_START,0,0,0); }
   else if(d.getHours()>=WAKE_END){ d.setDate(d.getDate()+1); d.setHours(WAKE_START,0,0,0); }
-  while(d.getDay()===0||d.getDay()===6){ d.setDate(d.getDate()+1); d.setHours(WAKE_START,0,0,0); }
   return d;
 }
 // toon tijd als 'due' vandaag is, anders MM-DD
@@ -1374,7 +1374,7 @@ function moveLeadPhase(id, phase){
   } else if(phase==='c_closed'){
     // afgesloten → langetermijn follow-up: 1× per kwartaal
     l.fups = 0;
-    l.due = addDaysSkipWeekend(90);
+    l.due = addDaysClamped(90);
   }
   stampFlagDates(l);
   saveState(); renderAll();
@@ -1740,7 +1740,7 @@ function snooze(id,n){
   const l = state.leads.find(x=>x.id===id); if(!l) return;
   const base = l.due && l.due>nowISO() ? new Date(l.due) : new Date();
   base.setDate(base.getDate()+n);
-  l.due = toLocalISO(clampSchedule(base));   // werkuren + weekend overslaan
+  l.due = toLocalISO(clampSchedule(base));   // werkuren (weekend mag)
   saveState(); renderAll();
 }
 
@@ -1757,14 +1757,14 @@ function markReplied(id){
   saveState(); renderAll();
 }
 
-/* cadans: follow-up 1 & 2 na 12 uur, daarna elke 2 dagen — werkuren 06–22, weekend overslaan */
+/* cadans: follow-up 1 & 2 na 12 uur, daarna elke 2 dagen — werkuren 06–22 (weekend mag) */
 function nextFupDate(fupsSent){
   const d = new Date();
   if((fupsSent||0) < 2){ d.setTime(d.getTime() + 12*3600*1000); }  // fup 1 & 2: +12 uur
   else { d.setDate(d.getDate() + 2); }                             // daarna: elke 2 dagen
   return toLocalISO(clampSchedule(d));
 }
-function addDaysSkipWeekend(n){                                  // voor de kwartaal check-in
+function addDaysClamped(n){                                  // voor de kwartaal check-in
   const d = new Date(); d.setDate(d.getDate()+n);
   return toLocalISO(clampSchedule(d));
 }
@@ -1779,7 +1779,7 @@ function logFollowup(id){
   l.lastMsgDate = todayISO();              // outbound follow-up = laatste bericht
   l.lastFupDate = todayISO();
   // om de dag, exclusief weekend; kwartaal check-in = 90 dagen
-  l.due = l.phase==='c_closed' ? addDaysSkipWeekend(90) : nextFupDate(l.fups);
+  l.due = l.phase==='c_closed' ? addDaysClamped(90) : nextFupDate(l.fups);
   if(l.fups>=max) l.due = ''; // exhausted, clear queue
   saveState(); renderAll();
 }
