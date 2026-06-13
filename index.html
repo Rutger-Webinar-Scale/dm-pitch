@@ -958,6 +958,8 @@ async function doLogout(){ await sb.auth.signOut(); location.reload(); }
 
 /* ---------- helpers ---------- */
 const todayISO = ()=> new Date().toISOString().slice(0,10);
+// weekend = za/zo → focus op follow-ups, nieuwe outreach optioneel
+const isWeekend = ()=>{ const d=new Date().getDay(); return d===0||d===6; };
 // lokale datetime "YYYY-MM-DDTHH:MM" (geen UTC-shift) — gebruikt voor follow-up planning
 function nowISO(){ return toLocalISO(new Date()); }
 function toLocalISO(d){ const p=n=>String(n).padStart(2,'0');
@@ -1152,9 +1154,10 @@ function renderMetrics(){
   wrap.innerHTML = html;
 
   const dayGoal = state.goal*seats;
+  const weekend = isWeekend();
   document.getElementById('appNow').textContent = appToday;
-  document.getElementById('appGoal').textContent = dayGoal;
-  document.getElementById('appBar').style.width = Math.min(100,(appToday/dayGoal)*100)+'%';
+  document.getElementById('appGoal').textContent = weekend ? '—' : dayGoal;  // weekend = optioneel
+  document.getElementById('appBar').style.width = (weekend ? 100 : Math.min(100,(appToday/dayGoal)*100))+'%';
   document.getElementById('approachedToday').textContent = appToday;
 }
 
@@ -1182,7 +1185,8 @@ function renderTeam(){
     const convos = ls.filter(l=> l.phase==='c_convo' || l.phase==='engaged').length;
     const ap = cnt(ls,'approached');
     const status = late>0 ? ['var(--bad)','⚠ follow-ups te laat']
-                 : (sent>=state.goal ? ['var(--go)','✓ dagdoel gehaald'] : ['var(--warn)','dagdoel nog niet gehaald']);
+                 : (isWeekend() ? ['var(--go)','🌤️ weekend — follow-ups bij']
+                 : (sent>=state.goal ? ['var(--go)','✓ dagdoel gehaald'] : ['var(--warn)','dagdoel nog niet gehaald']));
     html += `<div class="abcard" style="cursor:pointer" onclick="setSetterFilter('${p.id}');document.getElementById('setterSwitch').value='${p.id}'">
       <h4>${esc(p.name||p.email)}</h4>
       <div class="abn" style="color:${status[0]};font-weight:700">● ${status[1]}</div>
@@ -1433,8 +1437,9 @@ function renderWorklist(){
   // 3. nieuwe eerste DM's — aangevuld tot het dagdoel
   const fresh = vis.filter(l=> l.phase!=='dead' && !(l.flags&&l.flags.approached));
   const appToday = vis.filter(l=> l.flags && l.flags.approached && l.approachDate===t).length;
+  const weekend = isWeekend();
   const dayGoal = state.goal * (monitorMode ? Math.max(1, team.filter(x=>x.role==='setter').length) : 1);
-  const room = Math.max(0, dayGoal - appToday);
+  const room = weekend ? 0 : Math.max(0, dayGoal - appToday);   // weekend = geen nieuwe-DM-doel
   const freshNow = fresh.slice(0, room);
 
   const workCount = late.length + today.length + freshNow.length;
@@ -1444,12 +1449,15 @@ function renderWorklist(){
   const head=(emoji,title,n,cls)=>`<div class="qgroup-h"><span class="dot ${cls}"></span>${emoji} ${title} <span class="qn">${n}</span></div>`;
   const list=(rows)=>'<div style="display:flex;flex-direction:column;gap:9px">'+rows.join('')+'</div>';
   let html='';
+  if(weekend) html += `<div class="sec-sub" style="margin:0 0 12px">🌤️ Weekend — focus op de follow-ups (snel & belangrijk, niet te lang laten liggen). Nieuwe outreach is optioneel: pak je voorraad als je tijd over hebt.</div>`;
   if(late.length)  html += head('⚠','Te laat & stilgevallen — eerst deze', late.length, 'today') + list(late.map(dueRowHTML));
-  if(today.length) html += head('📅','Follow-ups vandaag', today.length, 'soon') + list(today.map(dueRowHTML));
+  if(today.length) html += head('🔁','Follow-ups vandaag', today.length, 'soon') + list(today.map(dueRowHTML));
   if(freshNow.length){
     html += head('✉️','Nieuwe eerste DM\'s — tot je dagdoel', freshNow.length, 'later') + list(freshNow.map(sendRowHTML));
     if(fresh.length > freshNow.length)
       html += `<div class="sec-sub" style="margin-top:10px">+ ${fresh.length-freshNow.length} leads op voorraad voor na je dagdoel · <a class="link" style="cursor:pointer" onclick="switchView('all')">alle leads</a></div>`;
+  } else if(weekend && fresh.length){
+    html += `<div class="sec-sub" style="margin-top:14px">✉️ Voorraad nieuwe outreach: ${fresh.length} leads klaar · <a class="link" style="cursor:pointer" onclick="switchView('all')">alle leads</a></div>`;
   }
   if(!html){
     html = `<div class="empty" style="background:var(--card);border:1.5px solid var(--line);border-radius:14px">${
@@ -2613,6 +2621,7 @@ function applyRoleCopy(){
     if(wt) wt.textContent = 'Jouw werklijst';
     if(ws) ws.textContent = 'Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.';
   }
+  if(isWeekend()) gl.textContent = "Weekend — follow-ups eerst · nieuwe DM's optioneel";
 }
 function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); renderCalendar(); }
 
