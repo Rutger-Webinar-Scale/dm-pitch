@@ -2706,12 +2706,14 @@ function renderCalDay(){
   const [Y,M,D] = calSel.split('-');
   const isToday = calSel===todayISO();
   const head = `<div class="sec-h" style="font-size:15px;margin-top:20px">📋 Werklijst — ${parseInt(D)} ${CAL_MONTHS[parseInt(M)-1]}${isToday?' · vandaag':''}
-    <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400">${data.dm.length} eerste DM · ${data.fup.length} follow-up</span></div>`;
-  // volledige werklijst-rijen: eerste DM's (sendRowHTML) + follow-ups (dueRowHTML)
-  const rows = data.dm.map(l=>sendRowHTML(l)).concat(data.fup.map(l=>dueRowHTML(l))).join('');
-  box.innerHTML = head + (rows
-    ? `<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">${rows}</div>`
-    : `<div class="sec-sub" style="margin-top:8px">Geen taken op deze dag. 🎉</div>`);
+    <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400">${data.fup.length} follow-up · ${data.dm.length} eerste DM</span></div>`;
+  // follow-ups eerst (belangrijker), daarna nieuwe eerste DM's — elk onder eigen kop
+  const grp=(emoji,title,n,cls)=>`<div class="qgroup-h" style="margin-top:14px"><span class="dot ${cls}"></span>${emoji} ${title} <span class="qn">${n}</span></div>`;
+  const block=(rows)=>`<div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${rows.join('')}</div>`;
+  let body='';
+  if(data.fup.length) body += grp('🔁','Follow-ups',data.fup.length,'soon') + block(data.fup.map(dueRowHTML));
+  if(data.dm.length)  body += grp('✉️','Nieuwe eerste DM\'s',data.dm.length,'later') + block(data.dm.map(sendRowHTML));
+  box.innerHTML = head + (body || `<div class="sec-sub" style="margin-top:8px">Geen taken op deze dag. 🎉</div>`);
 }
 function calPick(iso){ calSel = (calSel===iso ? null : iso); renderCalendar(); }
 function calToday(){ const n=new Date(); calYM={y:n.getFullYear(), m:n.getMonth()}; calSel=todayISO(); renderCalendar(); }
