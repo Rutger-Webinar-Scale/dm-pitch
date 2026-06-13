@@ -816,7 +816,9 @@ const KPIS = [
 const TOOLS = [
   {base:'th_allround',   stage:'initial', type:'media', accept:'video/*,image/*', name:'Initiële video',                desc:'Een voorbeeld voor de vibe — stuur je vanaf Rutgers account (@rutgerkreulen / @rutger.kreulen), dan mag je deze video gebruiken'},
   {base:'video',         stage:'vsl',     type:'link',  tool:'Loom',              name:'Evergreen VSL',                 desc:'Link naar de evergreen VSL'},
-  {base:'training',      stage:'vsl',     type:'link',  tool:'training',          name:'Training',                      desc:'Link naar de training'},
+  {base:'training',      stage:'vsl',     type:'link',  tool:'training',          name:'Training 1',                    desc:'Link naar de training'},
+  {base:'training2',     stage:'vsl',     type:'link',  tool:'training',          name:'Training 2',                    desc:'Link naar de training'},
+  {base:'training3',     stage:'vsl',     type:'link',  tool:'training',          name:'Training 3',                    desc:'Link naar de training'},
   {base:'vn_vsl',        stage:'vsl',     type:'media', accept:'audio/*',         name:'Voice-note bij VSL',            desc:'Pro-tip: stuur als spraakmemo — converteert beter. Houd de speaker bij de IG voice-note zodat hij als voice-note verstuurd wordt — verstuur dus niet de mp3 zelf. Ben je onderweg? Stuur dan zo snel mogelijk een tekstbericht.'},
   {base:'booking',       stage:'booking', type:'link',  tool:'iClosed',           name:'Calendar link',                 desc:'De agendalink voor deze taal'},
   {base:'vn_booking',    stage:'booking', type:'media', accept:'audio/*',         name:'Voice-note bij calendar link',  desc:'Pro-tip: stuur als spraakmemo — converteert beter. Houd de speaker bij de IG voice-note zodat hij als voice-note verstuurd wordt — verstuur dus niet de mp3 zelf.'}
@@ -1745,7 +1747,7 @@ function assetBtnsHTML(l, step){
     h += btn(`🎥 Initiële video${vlabel} ${flag}`, links['th_allround'+vsfx+sfx] || links['th_allround'+sfx]);
   }
   if(step.vsl){
-    h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎓 Training ${flag}`,links['training'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
+    h += btn(`🎬 VSL-link ${flag}`,links['video'+sfx]) + btn(`🎓 Training 1 ${flag}`,links['training'+sfx]) + btn(`🎓 Training 2 ${flag}`,links['training2'+sfx]) + btn(`🎓 Training 3 ${flag}`,links['training3'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_vsl'+sfx]);
   }
   if(step.booking){
     h += btn(`📅 Calendar link ${flag}`,links['booking'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_booking'+sfx]);
