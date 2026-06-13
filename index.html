@@ -539,6 +539,15 @@
         <div id="chatFups"></div>
       </div>
     </div>
+
+    <div class="chain" style="margin-top:16px;grid-template-columns:1fr">
+      <div class="scard">
+        <h4>🔗 Eigen links</h4>
+        <div class="meta">Voeg zelf extra links toe (training, resource, wat dan ook). Per taal in te vullen, gedeeld met het team en kopieerbaar in de werklijst.</div>
+        <div id="extraLinks" style="margin-top:12px"></div>
+        <button class="btn ghost sm" style="margin-top:10px" onclick="addExtraLink()">+ Link toevoegen</button>
+      </div>
+    </div>
   </section>
 
   <!-- ================= INFO / HUB ================= -->
@@ -883,7 +892,8 @@ async function loadCloud(){
   state.goal       = sh.goal || 30;
   state.toolLinks  = sh.toolLinks || {};
   state.resources  = sh.resources || {};
-  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks), resources:JSON.stringify(state.resources) };
+  state.extraLinks = Array.isArray(sh.extraLinks) ? sh.extraLinks : [];
+  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks), resources:JSON.stringify(state.resources), extraLinks:JSON.stringify(state.extraLinks) };
   const ud = (userRes.data && userRes.data.data) || {};
   state.lang          = ud.lang || 'nl';
   state.accounts      = (ud.accounts && ud.accounts.length) ? ud.accounts : [ (me.email||'account').split('@')[0].replace(/\./g,'') ];
@@ -913,7 +923,7 @@ async function syncNow(){
     if(dels.length){ const {error} = await sb.from('leads').delete().in('id', dels); if(error) throw error; }
     lastSync = cur;
     // shared team state
-    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}, resources:state.resources||{}};
+    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}, resources:state.resources||{}, extraLinks:state.extraLinks||[]};
     for(const k in sh){
       const j = JSON.stringify(sh[k]);
       if(sharedSnap[k] !== j){
@@ -1740,6 +1750,7 @@ function assetBtnsHTML(l, step){
   if(step.booking){
     h += btn(`📅 Calendar link ${flag}`,links['booking'+sfx]) + btn(`🎙 Voice-note ${flag}`,links['vn_booking'+sfx]);
   }
+  (state.extraLinks||[]).forEach(x=>{ h += btn(`🔗 ${x.name} ${flag}`, links[x.id+sfx]); });
   return h ? `<div class="qflags" style="margin-top:8px">${h}</div>` : '';
 }
 
@@ -2129,6 +2140,65 @@ function renderPlaybook(){
       saveState();
     });
     inp.addEventListener('change',()=> renderPlaybook());
+  });
+}
+
+/* ---------- EIGEN LINKS (vrij toe te voegen, gedeeld + per taal) ---------- */
+function addExtraLink(){
+  const name = (prompt('Naam van de link (bijv. "Training", "Case study"):','')||'').trim();
+  if(!name) return;
+  state.extraLinks = state.extraLinks || [];
+  state.extraLinks.push({id:'x'+Date.now().toString(36), name});
+  saveState(); renderExtraLinks();
+}
+function renameExtraLink(id){
+  const x = (state.extraLinks||[]).find(e=>e.id===id); if(!x) return;
+  const name = (prompt('Naam wijzigen:', x.name)||'').trim();
+  if(!name) return;
+  x.name = name; saveState(); renderExtraLinks();
+}
+function removeExtraLink(id){
+  const x = (state.extraLinks||[]).find(e=>e.id===id); if(!x) return;
+  if(!confirm('Link "'+x.name+'" verwijderen?')) return;
+  state.extraLinks = state.extraLinks.filter(e=>e.id!==id);
+  const links = state.toolLinks||{}; delete links[id+'_nl']; delete links[id+'_en'];
+  state.toolLinks = links;
+  saveState(); renderExtraLinks();
+}
+function renderExtraLinks(){
+  const box = document.getElementById('extraLinks'); if(!box) return;
+  const links = state.toolLinks||{};
+  const list = state.extraLinks||[];
+  if(!list.length){ box.innerHTML = '<div class="sd2">Nog geen eigen links. Klik op “+ Link toevoegen”.</div>'; return; }
+  box.innerHTML = list.map(x=>{
+    const row = (lang)=>{
+      const key = x.id+'_'+lang, url = links[key]||'';
+      const flag = lang==='en' ? '🇬🇧 EN' : '🇳🇱 NL';
+      return `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+        <span class="tag" style="flex:none">${flag}</span>
+        <input class="gifinput" style="flex:1;min-width:160px" data-toollink="${key}" placeholder="Plak hier de ${flag.slice(3)}-link…" value="${esc(url)}">
+        ${url?`<a class="link" href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:''}
+        ${url?`<button class="btn ghost sm copybtn" onclick="copyScript(this)" data-copy="${esc(url).replace(/"/g,'&quot;')}">Kopieer</button>`:''}
+      </div>`;
+    };
+    return `<div class="fupblock">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span class="tag">🔗 ${esc(x.name)}</span>
+        <span style="display:flex;gap:6px">
+          <button class="btn ghost sm" onclick="renameExtraLink('${x.id}')">Hernoem</button>
+          <button class="btn ghost sm" style="border-color:var(--bad);color:var(--bad)" onclick="removeExtraLink('${x.id}')">✕</button>
+        </span>
+      </div>
+      ${row('nl')}${row('en')}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-toollink]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      state.toolLinks = state.toolLinks||{};
+      state.toolLinks[inp.dataset.toollink] = inp.value.trim();
+      saveState();
+    });
+    inp.addEventListener('change',()=> renderExtraLinks());
   });
 }
 async function uploadAsset(key, inp){
@@ -2644,7 +2714,7 @@ function applyRoleCopy(){
     if(ws) ws.textContent = 'Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.';
   }
 }
-function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); renderCalendar(); }
+function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderExtraLinks(); renderInfo(); renderCalendar(); }
 
 /* ---------- AGENDA / MAANDKALENDER (Vandaag-tab) ---------- */
 let calYM = null, calSel = null;
