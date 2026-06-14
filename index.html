@@ -769,13 +769,13 @@ Lisa, instagram.com/lisa, booked"></textarea>
 <script>
 const PHASES = {
   // ---- VSL funnel ----
-  intent:  {label:'Intent',        color:'var(--intent)',  maxFup:3, funnel:'video', desc:'Nog geen reactie · max 3 follow-ups'},
+  intent:  {label:'Intent',        color:'var(--intent)',  maxFup:1, funnel:'video', desc:'Nog geen reactie · max 1 follow-up'},
   engaged: {label:'Geïnteresseerd',color:'var(--engaged)', maxFup:8, funnel:'video', desc:'Interesse getoond · tot 8 follow-ups'},
   booked:  {label:'Booking gestuurd',color:'var(--signal)', maxFup:8, funnel:'video', desc:'Agendalink gestuurd · chase tot de call staat'},
   met:     {label:'Afspraak geboekt',color:'var(--booked)', maxFup:0, funnel:'video', desc:'Call staat in de agenda'},
   dead:    {label:'Afgesloten',    color:'var(--muted)',   maxFup:0, funnel:'video', desc:'Gesloten · later opnieuw bekijken'},
   // ---- chat funnel (gesprek-aanpak, fase 1-5) ----
-  c_new:   {label:'1 · Nieuwe lead',     color:'var(--intent)',  maxFup:3,  funnel:'chat', desc:'Opening gestuurd · wacht op reactie'},
+  c_new:   {label:'1 · Nieuwe lead',     color:'var(--intent)',  maxFup:1,  funnel:'chat', desc:'Opening gestuurd · wacht op reactie · max 1 follow-up'},
   c_convo: {label:'2 · In gesprek',      color:'var(--engaged)', maxFup:8,  funnel:'chat', desc:'Actieve conversatie · stuur richting call'},
   c_call:  {label:'3 · Call voorgesteld',color:'var(--signal)',  maxFup:8,  funnel:'chat', desc:'Call voorgesteld · chase tot er gepland is'},
   c_booked:{label:'4 · Gepland/geboekt', color:'var(--booked)',  maxFup:0,  funnel:'chat', desc:'Call staat in de agenda'},
@@ -1653,8 +1653,8 @@ function nextStep(l){
       const iv=initialScript(l.variant, leadLang(l));
       return {tag:'Eerste DM — nog niet verstuurd', detail:'Stuur de eerste DM', script:iv.text, gif:iv.gif, num:0, max:3, initial:true};
     }
-    if(f<3)  return {tag:`Intent FUP ${f+1} / 3`, detail:'Nog geen reactie · max 3', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:3};
-    return {tag:'Intent — limiet bereikt', detail:'3 follow-ups gedaan. Stop of sluit af.', script:'', gif:'', num:f, max:3};
+    if(f<1)  return {tag:`Intent FUP ${f+1} / 1`, detail:'Nog geen reactie · max 1', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:1};
+    return {tag:'Intent — limiet bereikt', detail:'1 follow-up gedaan. Stop of sluit af.', script:'', gif:'', num:f, max:1};
   }
   if(l.phase==='engaged'){
     if(f===0) return {tag:'Stuur de VSL', detail:'Ze reageerden 👍 — stuur de video (<2,5 min)', script:S.vsl||'', gif:g('vsl'), num:0, max:8, vsl:true};
@@ -1675,8 +1675,8 @@ function nextStep(l){
       const iv=initialScript(l.variant, leadLang(l));
       return {tag:'Opening — nog niet gestuurd', detail:'Stuur de eerste DM', script:iv.text, gif:iv.gif, num:0, max:3, initial:true};
     }
-    if(f<3) return {tag:`Opening FUP ${f+1} / 3`, detail:'Nog geen reactie · 3 max', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:3};
-    return {tag:'Opening — limiet bereikt', detail:'3 follow-ups gedaan. Sluit af of laat staan.', script:'', gif:'', num:f, max:3};
+    if(f<1) return {tag:`Opening FUP ${f+1} / 1`, detail:'Nog geen reactie · 1 max', script:S['ifup'+(f+1)]||'', gif:g('ifup'+(f+1)), num:f+1, max:1};
+    return {tag:'Opening — limiet bereikt', detail:'1 follow-up gedaan. Sluit af of laat staan.', script:'', gif:'', num:f, max:1};
   }
   if(l.phase==='c_convo'){
     return {tag:'In gesprek — chat actief', detail:'Reageer persoonlijk · stuur richting een call', script:'', gif:'', num:f, max:8};
@@ -1997,8 +1997,6 @@ function buildScriptBlocks(){
   // INTENT
   let h='';
   h+=blockHTML('FUP 1','ifup1',"{{first.name}} 👀","{{first.name}} 👀",true);
-  h+=blockHTML('FUP 2','ifup2',"Nog steeds benieuwd of dit interessant voor je is — 30 seconden waard?","Still keen to show you this — worth 30 seconds?",true);
-  h+=blockHTML('FUP 3','ifup3',"Laatste reminder van mij — zal ik het sturen of niet?","Last nudge from me — want me to send it or no?",true);
   h+=blockHTML('Reactie op negatief antwoord','neg',"Helemaal goed — fijne dag nog!","No worries at all — have a great one!",false);
   document.getElementById('intentFups').innerHTML=h;
   // ENGAGED
