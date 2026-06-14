@@ -467,6 +467,10 @@
         <button class="range-btn" data-fn="chat" onclick="setFunnelView('chat')">💬 Chat</button>
       </div>
     </div>
+    <div style="margin-top:12px;position:relative;max-width:340px">
+      <input class="gifinput" id="pipeSearch" style="width:100%;padding-right:60px" placeholder="🔍 Zoek op naam of @gebruikersnaam…" oninput="setPipeSearch(this.value)">
+      <button id="pipeSearchClear" onclick="clearPipeSearch()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px" title="Wissen">✕</button>
+    </div>
     <div class="board" id="board" style="margin-top:14px"></div>
   </section>
 
@@ -1302,6 +1306,24 @@ function renderFunnel(){
 
 /* ---------- PIPELINE BOARD (per funnel) ---------- */
 let activeFunnel = 'video';
+let pipeSearch = '';
+function setPipeSearch(q){
+  pipeSearch = q;
+  const clr=document.getElementById('pipeSearchClear'); if(clr) clr.style.display = q ? 'block':'none';
+  renderBoard();
+}
+function clearPipeSearch(){
+  pipeSearch='';
+  const inp=document.getElementById('pipeSearch'); if(inp) inp.value='';
+  const clr=document.getElementById('pipeSearchClear'); if(clr) clr.style.display='none';
+  renderBoard();
+}
+/* match on first name (or any name part) AND username/IG-handle */
+function matchPipeSearch(l){
+  const q = pipeSearch.trim().toLowerCase(); if(!q) return true;
+  const hay = [l.name, l.username, (l.link||'')].filter(Boolean).join(' ').toLowerCase().replace(/^@/,'');
+  return q.split(/\s+/).every(t=> hay.includes(t.replace(/^@/,'')));
+}
 function setFunnelView(fn){
   activeFunnel = fn;
   document.querySelectorAll('#funnelToggle .range-btn').forEach(b=>b.classList.toggle('active', b.dataset.fn===fn));
@@ -1310,7 +1332,7 @@ function setFunnelView(fn){
 function renderBoard(){
   const board = document.getElementById('board');
   let html='';
-  const vis = visibleLeads().filter(l=> leadFunnel(l)===activeFunnel);
+  const vis = visibleLeads().filter(l=> leadFunnel(l)===activeFunnel && matchPipeSearch(l));
   const cols = funnelPhases(activeFunnel).filter(ph=> ph!=='dead');
   board.classList.toggle('cols4', cols.length===4);
   board.classList.toggle('cols5', cols.length>=5);
@@ -1399,7 +1421,7 @@ function leadCardHTML(l){
       ${l.phase==='met'&&l.callDate?`<span class="due later" title="Datum geboekte call">📅 ${esc(l.callDate)}</span>`:''}
       ${staleBadge(l)}
       ${convoLinkHTML(l)}
-      ${(l.flags&&l.flags.approached)?`<span class="fupbadge">FUP ${l.fups||0}/${PHASES[l.phase].maxFup}</span>`:`<span class="due today">te sturen</span>`}</div>
+      ${(l.flags&&l.flags.approached)?'':`<span class="due today">te sturen</span>`}</div>
     <div class="card-step">→ ${step.tag}</div>
     ${quickFlagsHTML(l)}
   </div>`;
@@ -1698,7 +1720,6 @@ function dueRowHTML(l){
           ${l.variant?`<span class="vbadge ${l.variant}">Var ${l.variant}</span>`:''}
           <span class="plat">${leadLang(l)==='en'?'EN':'NL'}</span>
           <span class="plat" style="border-color:var(--signal);color:var(--signal)" title="Stuur deze follow-up vanaf hetzelfde account als eerder">📤 via @${esc(leadAccount(l))}</span>
-          <span class="fupbadge">FUP ${l.fups||0}/${max}</span>
           ${l.link?`<a class="link" href="${esc(l.link)}" target="_blank" rel="noopener">profiel ↗</a>`:''}
           ${convoLinkHTML(l)}
           ${l.notes?`<span style="color:var(--muted);font-size:10px">· ${esc(l.notes).slice(0,60)}</span>`:''}</div>
