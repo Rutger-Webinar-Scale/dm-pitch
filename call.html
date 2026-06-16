@@ -533,6 +533,8 @@
         <div><label class="f">Bedrijf</label><input class="f" id="f-company" placeholder="Bedrijfsnaam"></div>
         <div><label class="f">Website</label><input class="f" id="f-website" placeholder="https://..."></div>
       </div>
+      <label class="f">LinkedIn</label>
+      <input class="f" id="f-linkedin" placeholder="linkedin.com/in/...">
       <div id="f-website-link" style="margin-top:7px"></div>
       <label class="f">Fase</label>
       <div class="stepper" id="phaseStepper"></div>
@@ -1001,6 +1003,7 @@ function renderWorklist(){
         ${l.city?`<span>${esc(l.city)}</span>`:''}
         ${l.company?`<span>${esc(l.company)}</span>`:''}
         ${l.website?`<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">site ↗</a>`:''}
+        ${l.linkedin?`<a class="link" href="${esc(l.linkedin)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">in ↗</a>`:''}
         ${callsBadge(l)}
         ${dueBadge(l)} ${setter}
       </div>
@@ -1114,7 +1117,7 @@ function renderTable(){
     const next = phaseOf(l)==='booked' ? (l.callDate?('📅 '+esc(l.callDate)):'afspraak') : (l.due?fmtDue(l.due):(phaseOf(l)==='dead'?'—':'te bellen'));
     return `<tr class="row" onclick="openLead('${l.id}')" style="cursor:pointer">
       <td><span class="statusdot"><span class="sd" style="background:${ph.color}"></span>${ph.label}</span></td>
-      <td><b>${esc(l.name||'(naamloos)')}</b>${l.website?` <a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(l.website)}">↗</a>`:''}${l.company?`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${esc(l.company)}</div>`:''}</td>
+      <td><b>${esc(l.name||'(naamloos)')}</b>${l.website?` <a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(l.website)}">↗</a>`:''}${l.linkedin?` <a class="link" href="${esc(l.linkedin)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="LinkedIn">in</a>`:''}${l.company?`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${esc(l.company)}</div>`:''}</td>
       <td>${phoneHTML(l)}</td>
       <td>${esc(l.city||'')}</td>
       ${setterCell}
@@ -1226,7 +1229,10 @@ function openLead(id){
   document.getElementById('f-city').value=l?.city||'';
   document.getElementById('f-company').value=l?.company||'';
   document.getElementById('f-website').value=l?.website||'';
-  document.getElementById('f-website-link').innerHTML = l?.website ? `<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener">↗ open website</a>` : '';
+  document.getElementById('f-linkedin').value=l?.linkedin||'';
+  document.getElementById('f-website-link').innerHTML =
+    (l?.website ? `<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" style="margin-right:14px">↗ open website</a>` : '') +
+    (l?.linkedin ? `<a class="link" href="${esc(l.linkedin)}" target="_blank" rel="noopener">in open LinkedIn</a>` : '');
   document.getElementById('f-calls').value=l?.calls||0;
   document.getElementById('f-due').value=l?.due ? (l.due.length>10?l.due:l.due+'T09:00') : '';
   document.getElementById('f-calldate').value=l?.callDate||'';
@@ -1280,6 +1286,7 @@ function saveLead(){
     city: document.getElementById('f-city').value.trim(),
     company: document.getElementById('f-company').value.trim(),
     website: document.getElementById('f-website').value.trim(),
+    linkedin: document.getElementById('f-linkedin').value.trim(),
     cphase: modalPhase,
     cflags: modalFlags,
     calls: Math.min(MAX_CALLS, Math.max(0,parseInt(document.getElementById('f-calls').value)||0)),
