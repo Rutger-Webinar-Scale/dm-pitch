@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cold Call System — Cold Outbound System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --ink:#0d0f12;
+    --paper:#f4f1ea;
+    --paper-2:#ebe6db;
+    --card:#fbfaf6;
+    --line:#d8d2c4;
+    --line-2:#c4bdac;
+    --signal:#ff4d1c;     /* outbound orange — the "stimuli" accent */
+    --signal-dim:#ffe3d8;
+    --go:#1f7a4d;         /* on/above KPI */
+    --go-bg:#e3f1e8;
+    --warn:#b8860b;
+    --bad:#c0392b;
+    --bad-bg:#f6e2df;
+    --muted:#7c7768;
+    --intent:#5b6cff;
+    --engaged:#9b51e0;
+    --booked:#1f7a4d;
+    --shadow:0 1px 0 rgba(0,0,0,.04), 0 8px 24px rgba(20,18,12,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  body{background-image:radial-gradient(var(--line) .5px, transparent .5px);background-size:22px 22px}
+
+  /* ---- layout ---- */
+  .wrap{max-width:1280px;margin:0 auto;padding:0 22px 120px}
+  header.top{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:34px 0 22px;border-bottom:2px solid var(--ink);margin-bottom:26px;gap:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:16px}
+  .plane{width:46px;height:46px;border:2px solid var(--ink);border-radius:12px;display:grid;place-items:center;background:var(--ink);flex:none}
+  .plane svg{width:24px;height:24px;fill:var(--paper);transform:rotate(-8deg)}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:30px;letter-spacing:-.5px;line-height:1}
+  .sub{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+  .topright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    border:1.5px solid var(--ink);border-radius:30px;padding:8px 14px;background:var(--card);display:flex;align-items:center;gap:8px}
+  .pill b{font-weight:700}
+  .dotlive{width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 0 var(--signal);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,28,.5)}70%{box-shadow:0 0 0 7px rgba(255,77,28,0)}100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}}
+
+  /* ---- app switcher (logo dropdown) ---- */
+  .brand{position:relative;cursor:pointer;user-select:none}
+  .brand .caret{font-family:'Space Mono',monospace;font-size:14px;color:var(--muted);margin-left:4px;vertical-align:middle}
+  .brand:hover .caret{color:var(--signal)}
+  .appmenu{position:absolute;top:calc(100% + 10px);left:0;background:var(--card);border:2px solid var(--ink);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:7px;display:none;z-index:70;min-width:262px}
+  .appmenu.show{display:block;animation:pop .2s ease}
+  .appmenu a{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:10px;text-decoration:none;color:var(--ink)}
+  .appmenu a:hover{background:var(--paper-2)}
+  .appmenu a.cur{background:var(--paper-2)}
+  .appmenu .ai{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--ink);color:var(--paper);flex:none;font-size:18px}
+  .appmenu a.cur .ai{background:var(--signal)}
+  .appmenu .at{font-family:'Fraunces',serif;font-weight:600;font-size:15px;line-height:1.1}
+  .appmenu .ad{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+
+  /* ---- tabs ---- */
+  nav.tabs{display:flex;gap:4px;margin-bottom:26px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:0}
+  .tab{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+    padding:11px 16px;border:none;background:none;cursor:pointer;color:var(--muted);position:relative;font-weight:700;border-radius:6px 6px 0 0}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink)}
+  .tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--signal)}
+  .tab .count{display:inline-block;background:var(--ink);color:var(--paper);border-radius:20px;font-size:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+  .tab.active .count{background:var(--signal)}
+
+  .view{display:none;animation:fade .35s ease}
+  .view.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---- metric cards ---- */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:960px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.metrics{grid-template-columns:1fr}}
+  .mcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .mcard .label{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-height:30px;line-height:1.3}
+  .mcard .val{font-family:'Fraunces',serif;font-size:42px;font-weight:600;line-height:1;margin:8px 0 4px;letter-spacing:-1px}
+  .mcard .kpi{font-family:'Space Mono',monospace;font-size:11px;display:flex;align-items:center;gap:7px}
+  .mcard .kpi .tag{padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.04em}
+  .tag.ok{background:var(--go-bg);color:var(--go)}
+  .tag.under{background:var(--bad-bg);color:var(--bad)}
+  .tag.neutral{background:var(--paper-2);color:var(--muted)}
+  .mcard .denom{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px}
+  .mcard .spark{position:absolute;right:-2px;bottom:-2px;width:60px;height:60px;opacity:.07}
+  .mcard.alert{border-color:var(--signal)}
+  .mcard.alert::before{content:"BOTTLENECK";position:absolute;top:0;right:0;background:var(--signal);color:#fff;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.1em;padding:3px 8px;border-radius:0 12px 0 10px}
+
+  /* ---- section title ---- */
+  .sec-h{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin:30px 0 4px;display:flex;align-items:center;gap:10px}
+  .sec-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;letter-spacing:.03em}
+
+  /* ---- buttons ---- */
+  button.btn{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
+    border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:9px;cursor:pointer;transition:transform .08s,background .15s}
+  button.btn:hover{transform:translateY(-1px)}
+  button.btn:active{transform:translateY(0)}
+  button.btn.ghost{background:transparent;color:var(--ink)}
+  button.btn.ghost:hover{background:var(--ink);color:var(--paper)}
+  button.btn.sig{background:var(--signal);border-color:var(--signal)}
+  button.btn.sm{padding:7px 12px;font-size:11px}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+  /* ---- pipeline board ---- */
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}
+  .board.cols4{grid-template-columns:repeat(4,1fr);gap:12px}
+  .board.cols5{grid-template-columns:repeat(5,1fr);gap:12px}
+  @media(max-width:1150px){.board.cols4,.board.cols5{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:900px){.board,.board.cols4,.board.cols5{grid-template-columns:1fr}}
+  .col{background:var(--paper-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;min-height:200px}
+  .col-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .col-h .name{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:8px}
+  .phase-dot{width:10px;height:10px;border-radius:50%}
+  .col-h .num{font-family:'Fraunces',serif;font-size:22px;font-weight:600}
+  .col-desc{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:.03em;margin:-6px 0 12px;line-height:1.4}
+  .lead{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,transform .08s}
+  .lead:hover{border-color:var(--ink);transform:translateX(2px)}
+  .col [draggable="true"]{cursor:grab}
+  .lead.dragging{opacity:.45;cursor:grabbing}
+  .col.dragover{border-color:var(--signal);background:var(--signal-dim);border-style:dashed}
+  .lead .ln{font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .lead .lm{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .plat{font-size:9px;text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--line-2);border-radius:20px;padding:1px 7px}
+  .fupbadge{font-family:'Space Mono',monospace;font-size:9px;background:var(--signal-dim);color:var(--signal);border-radius:20px;padding:2px 7px;font-weight:700}
+  .due{font-family:'Space Mono',monospace;font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700}
+  .due.today{background:var(--bad-bg);color:var(--bad)}
+  .due.soon{background:#fdf3dd;color:var(--warn)}
+  .due.later{background:var(--paper-2);color:var(--muted)}
+  .empty{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:30px 10px;line-height:1.6}
+
+  /* ---- table (lead list ALL) ---- */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+  th{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;padding:12px 12px;border-bottom:1.5px solid var(--line);background:var(--paper-2)}
+  td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr.row:hover{background:var(--paper-2)}
+  .statusdot{display:inline-flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .sd{width:9px;height:9px;border-radius:50%}
+  a.link{color:var(--signal);text-decoration:none;font-family:'Space Mono',monospace;font-size:11px;border-bottom:1px solid transparent}
+  a.link:hover{border-bottom-color:var(--signal)}
+
+  /* ---- modal ---- */
+  .scrim{position:fixed;inset:0;background:rgba(13,15,18,.5);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+  .scrim.show{display:flex}
+  .modal{background:var(--card);border:2px solid var(--ink);border-radius:18px;width:100%;max-width:560px;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:pop .25s ease}
+  @keyframes pop{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:none}}
+  .modal-h{padding:20px 24px;border-bottom:1.5px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .modal-h h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600}
+  .modal-b{padding:22px 24px}
+  .x{cursor:pointer;border:none;background:none;font-size:22px;line-height:1;color:var(--muted)}
+  .x:hover{color:var(--ink)}
+  label.f{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;font-weight:700}
+  input.f,select.f,textarea.f{width:100%;font-family:'Manrope',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink)}
+  input.f:focus,select.f:focus,textarea.f:focus{outline:none;border-color:var(--signal)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-foot{padding:18px 24px;border-top:1.5px solid var(--line);display:flex;gap:10px;justify-content:space-between;align-items:center}
+
+  /* ---- stage stepper inside modal ---- */
+  .stepper{display:flex;gap:6px;margin:8px 0 4px}
+  .step{flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:8px 4px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-weight:700;color:var(--muted);background:var(--paper)}
+  .step.on{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+  .step[data-ph="intent"].on,.step[data-ph="c_new"].on{background:var(--intent);border-color:var(--intent)}
+  .step[data-ph="engaged"].on,.step[data-ph="c_convo"].on{background:var(--engaged);border-color:var(--engaged)}
+  .step[data-ph="c_call"].on{background:var(--signal);border-color:var(--signal)}
+  .step[data-ph="met"].on,.step[data-ph="c_booked"].on{background:var(--booked);border-color:var(--booked)}
+  .step[data-ph="booked"].on{background:var(--signal);border-color:var(--signal)}
+  .step[data-ph="dead"].on,.step[data-ph="c_closed"].on{background:var(--muted);border-color:var(--muted)}
+  .stale{font-family:'Space Mono',monospace;font-size:9px;background:var(--bad);color:#fff;border-radius:20px;padding:2px 7px;font-weight:700}
+  .daily{display:flex;gap:0;background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-bottom:20px;overflow:hidden;flex-wrap:wrap;box-shadow:var(--shadow)}
+  .daily .dcell{flex:1;min-width:110px;padding:13px 14px;border-right:1px solid var(--line);text-align:center}
+  .daily .dcell:last-child{border-right:none}
+  .daily .dnum{font-family:'Fraunces',serif;font-size:26px;font-weight:600;line-height:1}
+  .daily .dlbl{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px;line-height:1.3}
+
+  .quickrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+  /* ---- scripts / stimuli chain ---- */
+  .chain{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:900px){.chain{grid-template-columns:1fr}}
+  .scard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .scard h4{font-family:'Fraunces',serif;font-size:17px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .scard .meta{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+  .scard textarea{width:100%;min-height:80px;font-family:'Manrope';font-size:12.5px;padding:10px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);resize:vertical;line-height:1.5}
+  .scard textarea:focus{outline:none;border-color:var(--signal)}
+  .fupitem{margin-bottom:9px}
+  .fupitem .tag{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:block;margin-bottom:3px;letter-spacing:.05em}
+  /* individual follow-up block (one follow-up per block) */
+  .fupblock{border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:11px;background:var(--paper)}
+  .fupblock > .tag{font-family:'Space Mono',monospace;font-size:9px;color:var(--signal);display:block;margin-bottom:6px;letter-spacing:.06em;font-weight:700;text-transform:uppercase}
+  .fupblock textarea{width:100%;min-height:58px;font-family:'Manrope';font-size:12.5px;padding:9px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);resize:vertical;line-height:1.5}
+  .fupblock textarea:focus{outline:none;border-color:var(--signal)}
+  .gifrow{display:flex;align-items:center;gap:7px;margin-top:7px}
+  .gifrow .gico{font-size:13px;flex:none}
+  .gifinput{flex:1;min-width:0;font-family:'Space Mono',monospace;font-size:10.5px;padding:6px 9px;border:1.5px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)}
+  .gifinput:focus{outline:none;border-color:var(--signal)}
+  .gifprev{margin-top:7px}
+  .gifprev img{max-width:140px;max-height:120px;border-radius:8px;border:1.5px solid var(--line);display:block}
+  .gifprev .badgemini{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}
+  /* gif in the follow-up queue row */
+  .qgif{margin-top:8px;display:flex;align-items:center;gap:10px}
+  .qgif img{max-width:120px;max-height:100px;border-radius:8px;border:1.5px solid var(--line)}
+  .savednote{font-family:'Space Mono',monospace;font-size:10px;color:var(--go);opacity:0;transition:opacity .3s}
+  .savednote.show{opacity:1}
+
+  /* principles strip */
+  .princip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 4px}
+  @media(max-width:700px){.princip{grid-template-columns:1fr 1fr}}
+  .pcard{background:var(--ink);color:var(--paper);border-radius:12px;padding:14px 14px 16px}
+  .pcard .pn{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;opacity:.5}
+  .pcard .pt{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:4px 0 5px}
+  .pcard .pd{font-size:11px;line-height:1.45;opacity:.75}
+
+  .toolwrap{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(max-width:700px){.toolwrap{grid-template-columns:1fr}}
+  .tool{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .tool .tn{font-weight:700;font-size:13px}
+  .tool .td{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px}
+  .tool .tu{font-family:'Space Mono',monospace;font-size:10px;color:var(--signal)}
+
+  /* daily target bar */
+  .target{background:var(--ink);color:var(--paper);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .target .tlabel{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.65}
+  .target .big{font-family:'Fraunces',serif;font-size:34px;font-weight:600;line-height:1}
+  .bar{flex:1;min-width:200px;height:12px;background:rgba(255,255,255,.13);border-radius:20px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--signal);border-radius:20px;transition:width .5s ease}
+  .insight{background:var(--signal-dim);border:1.5px solid var(--signal);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.5;margin-top:16px;display:flex;gap:10px}
+  .insight b{font-weight:800}
+  .insight .ico{font-family:'Space Mono',monospace;color:var(--signal);font-weight:700;flex:none}
+
+  /* follow-up queue summary + groups */
+  .qsummary{background:var(--ink);color:var(--paper);border-radius:14px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:8px}
+  .qbig{font-family:'Fraunces',serif;font-size:42px;font-weight:600;line-height:1}
+  .qlabel{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.65;margin-top:4px}
+  .qmini{display:flex;gap:18px;font-family:'Space Mono',monospace;font-size:12px}
+  .qmini span{opacity:.85}.qmini b{font-size:16px;font-weight:700}
+  .qgroup-h{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:22px 0 10px;display:flex;align-items:center;gap:9px}
+  .qgroup-h .qn{background:var(--paper-2);border-radius:20px;padding:1px 9px;font-size:10px}
+  .qgroup-h .dot{width:9px;height:9px;border-radius:50%}
+  .qgroup-h .dot.today{background:var(--bad)}
+  .qgroup-h .dot.soon{background:var(--warn)}
+  .qgroup-h .dot.later{background:var(--muted)}
+  /* metrics time-range selector */
+  .rangebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .range-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .range-toggle{display:flex;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden;flex:none}
+  .range-btn{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.03em;border:none;background:var(--card);color:var(--muted);padding:8px 13px;cursor:pointer;border-right:1.5px solid var(--ink);transition:background .12s,color .12s}
+  .range-btn:last-child{border-right:none}
+  .range-btn.active{background:var(--signal);color:#fff}
+  .range-btn:not(.active):hover{background:var(--paper-2);color:var(--ink)}
+  .range-custom{display:none;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+  .range-custom.show{display:flex}
+  .range-custom input.f{width:auto;padding:7px 10px;font-size:12px}
+
+  /* language toggle in scripts tab */
+  .lang-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px}
+  .lang-toggle{display:flex;gap:0;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden;flex:none}
+  .lang-btn{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.04em;
+    border:none;background:var(--card);color:var(--muted);padding:9px 16px;cursor:pointer;transition:background .12s,color .12s}
+  .lang-btn:first-child{border-right:1.5px solid var(--ink)}
+  .lang-btn.active{background:var(--signal);color:#fff}
+  .lang-btn:not(.active):hover{background:var(--paper-2);color:var(--ink)}
+  /* import modal */
+  .mapgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+  @media(max-width:560px){.mapgrid{grid-template-columns:1fr}}
+  .mapgrid label.f{margin-top:0}
+  .mapgrid select.f{margin-top:5px}
+  .mapnote{font-family:'Space Mono',monospace;font-size:10px;line-height:1.5;color:var(--muted);background:var(--paper-2);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .imp-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .imp-tab{font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+    border:none;background:none;cursor:pointer;color:var(--muted);padding:9px 12px;position:relative}
+  .imp-tab.active{color:var(--ink)}
+  .imp-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2.5px;background:var(--signal)}
+  .imp-pane{display:none}.imp-pane.show{display:block}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;transition:border-color .15s,background .15s}
+  .drop.over{border-color:var(--signal);background:var(--signal-dim)}
+  .sync-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .sd2{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px}
+  .badge{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;flex:none}
+  .badge.auto{background:var(--go-bg);color:var(--go)}
+  .badge.man{background:var(--paper-2);color:var(--muted)}
+  .sync-note{font-size:12px;line-height:1.5;color:var(--ink);background:var(--signal-dim);border:1.5px solid var(--signal);border-radius:10px;padding:12px 14px;margin-top:14px}
+  .imp-prev-h{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+  .imp-prev{display:flex;flex-direction:column;gap:6px}
+  .imp-prow{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+  .card-step{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--signal);margin-top:6px;font-weight:700;letter-spacing:.02em}
+  /* the "which specific follow-up" box */
+  .stepbox{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
+  .step-tag{font-family:'Space Mono',monospace;font-size:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .step-tag b{font-weight:700}
+  .step-pin{width:8px;height:8px;border-radius:50%;flex:none}
+  .step-script{margin-top:8px;background:var(--paper);border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .qscript-text{font-size:12.5px;line-height:1.5;white-space:pre-wrap;flex:1}
+  .step-script .copybtn{flex:none}
+  .empty-script{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--muted);display:block}
+  .seed{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:14px}
+  .seed a{color:var(--signal);cursor:pointer;text-decoration:underline}
+
+  /* ---- A/B testing ---- */
+  .vbadge{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.04em;border-radius:20px;padding:1px 7px;border:1.5px solid var(--ink);color:var(--ink);background:var(--card)}
+  .vbadge.A{border-color:var(--intent);color:var(--intent)}
+  .vbadge.B{border-color:var(--signal);color:var(--signal)}
+  .vbadge.C{border-color:var(--engaged);color:var(--engaged)}
+  .abctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 18px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+  .abgrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:6px}
+  .abcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);position:relative}
+  .abcard.win{border-color:var(--go);box-shadow:0 0 0 2px var(--go-bg)}
+  .abcard.win::before{content:"LEADING";position:absolute;top:0;right:0;background:var(--go);color:#fff;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.1em;padding:3px 8px;border-radius:0 12px 0 10px}
+  .abcard h4{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:9px}
+  .abcard .abn{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+  .abcard .abmsg{font-size:12.5px;line-height:1.5;background:var(--paper);border:1.5px solid var(--line);border-radius:9px;padding:10px;margin-bottom:12px;min-height:54px;white-space:pre-wrap}
+  .abstat{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px dashed var(--line);font-family:'Space Mono',monospace;font-size:11px}
+  .abstat:last-child{border-bottom:none}
+  .abstat .k{color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .abstat .v{font-weight:700;font-size:14px}
+  .abstat .v.primary{color:var(--signal)}
+  .abverdict{background:var(--ink);color:var(--paper);border-radius:14px;padding:18px 22px;margin:6px 0 18px;line-height:1.55;font-size:13px}
+  .abverdict b{color:var(--signal)}
+  .vedithead{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--signal);margin:2px 0 6px}
+  .acctrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:9px;font-family:'Space Mono',monospace;font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .acctsel{font-family:'Space Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.03em;border:1.5px solid var(--ink);border-radius:8px;padding:6px 9px;background:var(--card);color:var(--ink);cursor:pointer;outline:none;max-width:160px}
+  .acctsel:focus{border-color:var(--signal)}
+  /* one-tap metric toggles on a lead row */
+  .qflags{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .qflag{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.02em;border:1.5px solid var(--line);background:var(--paper);color:var(--muted);border-radius:20px;padding:7px 13px;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+  .qflag:hover{border-color:var(--ink);color:var(--ink)}
+  .qflag.on{background:var(--go);border-color:var(--go);color:#fff}
+  .qflag.on.pos{background:var(--engaged);border-color:var(--engaged)}
+  .qflag.on.neg{background:var(--bad);border-color:var(--bad)}
+  .qflag.on.bk{background:var(--booked);border-color:var(--booked)}
+
+  .footer{margin-top:50px;border-top:1px solid var(--line);padding-top:18px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-align:center;line-height:1.7}
+
+  /* ---- auth / cloud ---- */
+  .authmsg{font-family:'Space Mono',monospace;font-size:11px;color:var(--bad);margin-top:12px;min-height:16px;line-height:1.5}
+  .authmsg.ok{color:var(--go)}
+  .authswitch{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:16px;text-align:center}
+  .authswitch a{color:var(--signal);cursor:pointer;text-decoration:underline}
+  .syncpill{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border-radius:20px;padding:4px 10px}
+  .syncpill.ok{background:var(--go-bg);color:var(--go)}
+  .syncpill.err{background:var(--bad-bg);color:var(--bad)}
+  .syncpill.busy{background:var(--paper-2);color:var(--muted)}
+  .mignote{font-family:'Space Mono',monospace;font-size:10.5px;line-height:1.7;color:var(--ink);background:var(--paper-2);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+  .mignote code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10px}
+  /* ---- agenda / kalender ---- */
+  .calhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .calnav{display:flex;gap:6px;align-items:center}
+  .calnav button{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:3px 10px;cursor:pointer}
+  .calnav button:hover{border-color:var(--signal);color:var(--signal)}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .calgrid.head{margin-top:14px;gap:6px}
+  .caldow{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;font-weight:700}
+  .calcell{position:relative;min-height:58px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:6px 7px;cursor:pointer;transition:border-color .12s,background .12s}
+  .calcell.empty{border:0;background:transparent;cursor:default}
+  .calcell:not(.empty):hover{border-color:var(--signal)}
+  .calcell.today{border-color:var(--signal);box-shadow:inset 0 0 0 1px var(--signal)}
+  .calcell.sel{background:var(--paper-2);border-color:var(--ink)}
+  .calcell .cd{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--ink)}
+  .calcell.past:not(.today) .cd{color:var(--muted)}
+  .calcell .cbadge{position:absolute;top:5px;right:6px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;background:var(--signal);color:#fff;border-radius:20px;padding:1px 7px;min-width:18px;text-align:center}
+  .calcell .cbadge.od{background:var(--bad)}
+  .caldots{position:absolute;bottom:6px;left:7px;display:flex;gap:3px;flex-wrap:wrap}
+  .cdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .cdot.dm{background:var(--intent)}
+  .cdot.fup{background:var(--engaged)}
+  .calday{margin-top:14px}
+  .calleg{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+  .calleg span{display:inline-flex;align-items:center;gap:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand" onclick="toggleAppMenu(event)" title="Wissel van systeem">
+      <div class="plane" style="background:var(--signal);border-color:var(--signal)"><span style="font-size:22px">📞</span></div>
+      <div>
+        <h1>Cold Call System <span class="caret">▾</span></h1>
+        <div class="sub">Bel-outreach · Pick up → Pitch → Appointment</div>
+      </div>
+      <div class="appmenu" id="appMenu">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);padding:5px 12px 8px;border-bottom:1px solid var(--line);margin-bottom:4px">Cold Outbound System</div>
+        <a href="index.html"><span class="ai">✈</span><span><span class="at">Pitch System</span><span class="ad">Instagram outreach</span></span></a>
+        <a class="cur" href="call.html"><span class="ai">📞</span><span><span class="at">Cold Call System</span><span class="ad">Bel-outreach</span></span></a>
+      </div>
+    </div>
+    <div class="topright">
+      <div class="pill"><span class="dotlive"></span> Live <b id="todayStr"></b></div>
+      <div class="pill" id="userPill" style="gap:6px"><b id="userName"></b> <span id="userRole" style="background:var(--signal);color:#fff;border-radius:20px;font-size:9px;padding:1px 7px"></span></div>
+      <div class="pill" id="setterPill" style="display:none;padding:5px 8px 5px 13px">🧑‍💼 <select id="setterSwitch" onchange="setSetterFilter(this.value)" style="border:none;background:none;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ink);outline:none"></select></div>
+      <div class="pill">Vandaag gebeld <b id="dialedToday">0</b></div>
+      <span class="syncpill ok" id="syncPill">cloud ✓</span>
+      <button class="btn ghost" onclick="openImport()">⇪ Importeer</button>
+      <button class="btn sig" onclick="openLead()">+ Bel-lead</button>
+      <button class="btn ghost sm" onclick="doLogout()" title="Uitloggen">⏻</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="dash">Vandaag <span class="count" id="cntWork">0</span></button>
+    <button class="tab" data-view="pipe">Pipeline <span class="count" id="cntPipe">0</span></button>
+    <button class="tab" data-view="all">Leads <span class="count" id="cntAll">0</span></button>
+    <button class="tab" data-view="scripts">Scripts</button>
+    <button class="tab" data-view="stats">Cijfers</button>
+    <button class="tab" data-view="team" id="tabTeam" style="display:none">Team</button>
+  </nav>
+
+  <!-- ================= VANDAAG ================= -->
+  <section class="view show" id="view-dash">
+    <div class="target">
+      <div>
+        <div class="tlabel" id="goalLabel">Jouw dagdoel — gesprekken vandaag</div>
+        <div class="big"><span id="appNow">0</span> / <span id="appGoal">50</span></div>
+      </div>
+      <div class="bar"><i id="appBar" style="width:0%"></i></div>
+      <button class="btn ghost sm" id="goalEditBtn" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Doel aanpassen</button>
+    </div>
+
+    <div class="daily" id="dailyStrip" style="margin-top:20px"></div>
+
+    <div id="worklistWrap">
+      <div class="sec-h" id="wlTitle">Belijst — <span id="wlCount">0</span> te bellen</div>
+      <div class="sec-sub">Bovenaan beginnen. Klik het nummer om te bellen, vink daarna af wat er gebeurde. Geen gehoor? Plan een terugbelmoment.</div>
+      <div id="worklist"></div>
+    </div>
+  </section>
+
+  <!-- ================= PIPELINE ================= -->
+  <section class="view" id="view-pipe">
+    <div class="lang-bar">
+      <div>
+        <div class="sec-h" style="margin:0">Bel-pipeline</div>
+        <div class="sec-sub" style="margin:2px 0 0">Sleep leads tussen de fases. Elke stap stempelt automatisch de bijbehorende KPI.</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;position:relative;max-width:340px">
+      <input class="gifinput" id="pipeSearch" style="width:100%;padding-right:60px" placeholder="🔍 Zoek op naam of nummer…" oninput="setPipeSearch(this.value)">
+      <button id="pipeSearchClear" onclick="clearPipeSearch()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px" title="Wissen">✕</button>
+    </div>
+    <div class="board cols4" id="board" style="margin-top:14px"></div>
+  </section>
+
+  <!-- ================= LEADS ================= -->
+  <section class="view" id="view-all">
+    <div class="sec-h">Alle bel-leads</div>
+    <div class="sec-sub">Elke lead in het bel-systeem.</div>
+    <div style="overflow-x:auto">
+      <table id="leadTable">
+        <thead><tr>
+          <th>Fase</th><th>Naam</th><th>Telefoon</th><th>Plaats</th>
+          <th id="thOwner" style="display:none">Setter</th><th>Volgende actie</th><th></th>
+        </tr></thead>
+        <tbody id="leadBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= SCRIPTS ================= -->
+  <section class="view" id="view-scripts">
+    <div class="lang-bar">
+      <div>
+        <div class="sec-h" style="margin:0">Bel-scripts</div>
+        <div class="sec-sub" style="margin:2px 0 0">Per fase van het gesprek. De toggle schakelt alles tussen Nederlands en Engels. Gedeeld met het hele bel-team.</div>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-btn active" data-lang="nl" onclick="setLang('nl')">🇳🇱 NL</button>
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:16px" id="scriptChain"></div>
+  </section>
+
+  <!-- ================= CIJFERS ================= -->
+  <section class="view" id="view-stats">
+    <div class="lang-bar">
+      <div>
+        <div class="sec-h" style="margin:0">Cijfers</div>
+        <div class="sec-sub" style="margin:2px 0 0">De KPI's van het belsysteem. Pick Up Rate ≥20%, Pitch Rate 5–10%, Appointment Booking Rate ≥2%.</div>
+      </div>
+      <div class="range-toggle" id="rangeToggle">
+        <button class="range-btn" data-range="7">7 dagen</button>
+        <button class="range-btn active" data-range="30">30 dagen</button>
+        <button class="range-btn" data-range="90">90 dagen</button>
+        <button class="range-btn" data-range="all">Alles</button>
+      </div>
+    </div>
+    <div class="metrics" id="metricCards" style="margin-top:16px"></div>
+    <div id="bottleneckInsight"></div>
+    <div class="sec-h">Funnel-doorstroom</div>
+    <div class="sec-sub">De output van elke fase is de input van de volgende. Zoek de fase die het systeem verstikt.</div>
+    <div id="funnelFlow"></div>
+  </section>
+
+  <!-- ================= TEAM (owner) ================= -->
+  <section class="view" id="view-team">
+    <div class="sec-h">Cold-call toegang</div>
+    <div class="sec-sub">Vink aan wie mag cold-callen. Setters zonder vinkje zien dit systeem niet en houden hun DM-flow ongewijzigd.</div>
+    <div class="quickrow" id="accessRow" style="margin-top:6px"></div>
+    <div class="sec-h" style="margin-top:30px">Per setter</div>
+    <div class="sec-sub">Klik een kaart om die setter te filteren. Wijs leads toe via de Leads-tab.</div>
+    <div style="overflow-x:auto" id="teamStats"></div>
+  </section>
+
+  <div class="footer">
+    COLD CALL SYSTEM · onderdeel van COLD OUTBOUND SYSTEM · los van het Pitch System · data gesynchroniseerd via Supabase cloud<br>
+    Wees consistent. Bel je aantallen. Data liegt niet.
+  </div>
+</div>
+
+<!-- ================= LEAD MODAL ================= -->
+<div class="scrim" id="scrim">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="modalTitle">Nieuwe bel-lead</h3>
+      <button class="x" onclick="closeLead()">×</button>
+    </div>
+    <div class="modal-b">
+      <div class="grid2">
+        <div><label class="f">Naam / bedrijf</label><input class="f" id="f-name" placeholder="Naam"></div>
+        <div><label class="f">Telefoon</label><input class="f" id="f-phone" placeholder="+31 6 ..."></div>
+      </div>
+      <div class="grid2">
+        <div><label class="f">Plaats</label><input class="f" id="f-city" placeholder="Stad"></div>
+        <div><label class="f">Website</label><input class="f" id="f-website" placeholder="https://..."></div>
+      </div>
+      <label class="f">Fase</label>
+      <div class="stepper" id="phaseStepper"></div>
+      <div class="grid2">
+        <div><label class="f">Belpogingen</label><input class="f" id="f-fups" type="number" min="0" value="0"></div>
+        <div><label class="f">Volgende belmoment</label><input class="f" id="f-due" type="datetime-local"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="f">Datum geboekte afspraak</label><input class="f" id="f-calldate" type="date"></div>
+        <div><label class="f">Taal</label>
+          <select class="f" id="f-lang">
+            <option value="">Standaardtaal gebruiken</option>
+            <option value="nl">🇳🇱 Nederlands</option>
+            <option value="en">🇬🇧 Engels</option>
+          </select>
+        </div>
+      </div>
+      <div id="f-setterWrap" style="display:none">
+        <label class="f">Toegewezen aan setter</label>
+        <select class="f" id="f-setter"></select>
+      </div>
+      <label class="f">Tracking (de KPI's)</label>
+      <div class="quickrow" id="flagRow"></div>
+      <label class="f">Notities</label>
+      <textarea class="f" id="f-notes" style="min-height:60px" placeholder="Bezwaren, beste belmoment, wat hielp..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" id="delBtn" onclick="deleteLead()" style="border-color:var(--bad);color:var(--bad)">Verwijder</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="closeLead()">Annuleer</button>
+        <button class="btn sig" onclick="saveLead()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= IMPORT MODAL ================= -->
+<div class="scrim" id="impScrim">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-h">
+      <h3>Bel-leads importeren</h3>
+      <button class="x" onclick="closeImport()">×</button>
+    </div>
+    <div class="modal-b">
+      <div class="imp-tabs">
+        <button class="imp-tab active" data-imp="paste" onclick="impTab('paste')">Plakken / typen</button>
+        <button class="imp-tab" data-imp="file" onclick="impTab('file')">CSV uploaden</button>
+      </div>
+      <div id="impSetterWrap" style="display:none;margin-bottom:12px">
+        <label class="f" style="margin-top:0">Toewijzen aan setter</label>
+        <select class="f" id="imp-setter"></select>
+      </div>
+      <div class="imp-pane show" id="imp-paste">
+        <label class="f">Eén lead per regel: <span style="text-transform:none;color:var(--ink)">naam, telefoon, plaats, website</span> (naam + telefoon verplicht)</label>
+        <textarea class="f" id="imp-text" style="min-height:160px;font-family:'Space Mono',monospace;font-size:12px" placeholder="Cinz Training &amp; Coaching, +31 6 10650362
+Cor the Coach, +31 6 18377278, Rotterdam"></textarea>
+      </div>
+      <div class="imp-pane" id="imp-file">
+        <label class="f">Upload een CSV (kolommen naam / telefoon / plaats / website)</label>
+        <div class="drop" id="dropZone">
+          <input type="file" id="csvFile" accept=".csv,.txt,.tsv" style="display:none">
+          <div style="font-size:13px;margin-bottom:8px">Sleep een CSV hierheen, of</div>
+          <button class="btn ghost sm" onclick="document.getElementById('csvFile').click()">Kies bestand</button>
+          <div id="csvName" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px"></div>
+        </div>
+      </div>
+      <div id="impPreview"></div>
+    </div>
+    <div class="modal-foot">
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)" id="impCount">0 leads klaar</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="closeImport()">Annuleer</button>
+        <button class="btn sig" id="impBtn" onclick="runImport()" disabled>Importeer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= NO ACCESS OVERLAY ================= -->
+<div class="scrim" id="noAccessScrim" style="background:var(--paper);backdrop-filter:none;align-items:center">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-h"><h3>Geen toegang tot cold-call</h3></div>
+    <div class="modal-b">
+      <p style="font-size:14px;line-height:1.6">Je account heeft (nog) geen toegang tot het Cold Call System. Vraag de owner om je aan te zetten in de Team-tab.</p>
+      <a class="btn sig" href="index.html" style="display:inline-block;margin-top:16px;text-decoration:none">← Naar Pitch System</a>
+    </div>
+  </div>
+</div>
+
+<!-- ================= AUTH OVERLAY ================= -->
+<div class="scrim show" id="authScrim" style="background:var(--paper);backdrop-filter:none;align-items:center">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="plane" style="background:var(--signal);border-color:var(--signal)"><span style="font-size:22px">📞</span></div>
+        <div><h3>Cold Call System</h3><div class="sub" style="margin-top:3px">Team login</div></div>
+      </div>
+    </div>
+    <div class="modal-b">
+      <div id="authLogin">
+        <label class="f">E-mail</label><input class="f" id="auth-email" type="email" placeholder="jij@mail.com" autocomplete="username">
+        <label class="f">Wachtwoord</label><input class="f" id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+        <div class="authmsg" id="authMsg"></div>
+        <button class="btn sig" style="width:100%;margin-top:6px" onclick="doLogin()">Log in</button>
+        <div class="authswitch">Inloggen werkt met je bestaande team-account.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* =====================================================================
+   COLD CALLING SYSTEM — losse single-file app. Deelt alleen Supabase
+   (auth + profiles) met het DM Pitch System. Eigen tabel: call_leads.
+   ===================================================================== */
+const CALL_PHASES = {
+  tocall:  {label:'Te bellen',  color:'var(--intent)',  desc:'Nog niet (succesvol) gesproken'},
+  pickup:  {label:'Opgenomen',  color:'var(--engaged)', desc:'Opgenomen — gesprek gaande'},
+  pitched: {label:'Gepitcht',   color:'var(--signal)',  desc:'Pitch gegeven'},
+  booked:  {label:'Afspraak',   color:'var(--booked)',  desc:'Afspraak ingepland'},
+  dead:    {label:'Afgesloten', color:'var(--muted)',   desc:'Niet bereikt / geen interesse'}
+};
+const PHASE_ORDER = ['tocall','pickup','pitched','booked','dead'];
+const FLAGS = [
+  {key:'dialed',  label:'Gebeld'},
+  {key:'pickup',  label:'Opgenomen'},
+  {key:'pitched', label:'Gepitcht'},
+  {key:'booked',  label:'Afspraak'}
+];
+const FLAG_DATE = {dialed:'dialedDate', pickup:'pickupDate', pitched:'pitchedDate', booked:'bookedDate'};
+// alle KPI's gemeten t.o.v. het aantal gebelde leads (dials)
+const KPIS = [
+  {key:'PUR', name:'Pick Up Rate (PUR)',   num:'pickup',  den:'dialed', kpi:20},
+  {key:'PR',  name:'Pitch Rate (PR)',      num:'pitched', den:'dialed', kpi:5, hi:10},
+  {key:'ABR', name:'Appt. Booking (ABR)',  num:'booked',  den:'dialed', kpi:2}
+];
+const PHASE_FLAGS = {
+  tocall:[], pickup:['dialed','pickup'], pitched:['dialed','pickup','pitched'],
+  booked:['dialed','pickup','pitched','booked'], dead:[]
+};
+// funnel-stappen voor de doorstroom-weergave
+const FUNNEL = [
+  {label:'Te bellen', flag:null, phase:'tocall'},
+  {label:'Gebeld',    flag:'dialed'},
+  {label:'Opgenomen', flag:'pickup'},
+  {label:'Gepitcht',  flag:'pitched'},
+  {label:'Afspraak',  flag:'booked'}
+];
+const SCRIPT_SECTIONS = [
+  {key:'opening',    label:'1 · Opening',          desc:'De eerste 10 seconden — pattern interrupt + reden van bellen'},
+  {key:'pitch',      label:'2 · Pitch',            desc:'Kort en scherp — wat je doet en waarom het relevant is'},
+  {key:'objections', label:'3 · Bezwaren',         desc:'Veelgehoorde bezwaren + je antwoord erop'},
+  {key:'booking',    label:'4 · Afspraak maken',   desc:'De call vragen — concreet, twee opties qua tijd'}
+];
+
+const SUPABASE_URL  = 'https://vpytvszdaepvaaclwuao.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZweXR2c3pkYWVwdmFhY2x3dWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4Mjg1MjQsImV4cCI6MjA5NjQwNDUyNH0.1F2_0ZIlMwGBQVqCQdJA3JRjddLQNU3DEqoulGWOk0k';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let state = { leads:[], scripts:{nl:{},en:{}}, goal:50, lang:'nl' };
+let me=null, team=[], setterFilter='all';
+let lastSync={}, sharedSnap={}, lastLoad=0;
+let activeRange='30';
+let editingId=null, modalPhase='tocall', modalFlags={};
+let pipeSearch='';
+
+/* ---------- helpers ---------- */
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+function toLocalISO(d){ const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+function nowISO(){ return toLocalISO(new Date()); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtPct(n){ return (n*100).toFixed(0)+'%'; }
+function fmtDue(due){ const hm = due.length>10 ? due.slice(11,16) : '';
+  return (due.slice(0,10)===todayISO() && hm) ? hm : due.slice(5,10); }
+function telLink(phone){ return 'tel:'+(phone||'').replace(/[^\d+]/g,''); }
+function canCall(){ return !!me && (me.role==='owner' || me.can_cold_call); }
+function setterName(id){ const p=team.find(t=>t.id===id); return p?(p.name||p.email):'?'; }
+function phaseOf(l){ return CALL_PHASES[l.cphase] ? l.cphase : 'tocall'; }
+function leadLang(l){ return (l && (l.lang==='nl'||l.lang==='en')) ? l.lang : state.lang; }
+
+function windowBounds(){
+  if(activeRange==='all') return {from:null,to:null};
+  const d=new Date(); d.setDate(d.getDate()-(parseInt(activeRange)-1));
+  return {from:d.toISOString().slice(0,10), to:todayISO()};
+}
+function windowDays(){ return activeRange==='all'?null:parseInt(activeRange); }
+function inWindow(dateISO){
+  if(!dateISO) return activeRange==='all';   // ongedateerde events tellen alleen mee in 'Alles'
+  const {from,to}=windowBounds();
+  if(from && dateISO<from) return false;
+  if(to && dateISO>to) return false;
+  return true;
+}
+function eventDate(l,flag){ return l[FLAG_DATE[flag]] || l.dialedDate || null; }
+function stampFlagDates(l){
+  l.cflags = l.cflags || {};
+  FLAGS.forEach(f=>{
+    if(l.cflags[f.key]){ if(!l[FLAG_DATE[f.key]]) l[FLAG_DATE[f.key]] = todayISO(); }
+    else delete l[FLAG_DATE[f.key]];   // flag uit → datum wissen (geen scheve venster-attributie bij her-aanvinken)
+  });
+}
+// plan een belmoment binnen werkuren (08:00–20:00)
+function nextCallSlot(hoursFromNow){
+  const d=new Date(); d.setHours(d.getHours()+(hoursFromNow||24));
+  if(d.getHours()<8) d.setHours(9,0,0,0);
+  else if(d.getHours()>=20){ d.setDate(d.getDate()+1); d.setHours(9,0,0,0); }
+  return toLocalISO(d);
+}
+
+/* ---------- data scope ---------- */
+function visibleLeads(){
+  let ls = state.leads;
+  if(me && me.role==='owner' && setterFilter!=='all') ls = ls.filter(l=>(l._setter||me.id)===setterFilter);
+  return ls;
+}
+function targetSetter(){
+  if(!me) return null;
+  if(me.role!=='owner') return me.id;
+  if(setterFilter!=='all') return setterFilter;
+  return me.id;
+}
+function callSetters(){ return team.filter(t=>t.role==='setter' && t.can_cold_call); }
+function stripPrivate(l){ const c=Object.assign({},l); delete c._setter; return c; }
+// change-signatuur — MOET _setter bevatten, anders persisteert herverdeling niet (stille dataloss)
+function leadSig(l){ return JSON.stringify({s:l._setter||null, d:stripPrivate(l)}); }
+
+/* ---------- KPI counting ---------- */
+function count(flag){ return visibleLeads().filter(l=> l.cflags && l.cflags[flag] && inWindow(eventDate(l,flag))).length; }
+function ratio(num,den){ const d=count(den); return d? count(num)/d : 0; }
+
+/* ---------- cloud persistence ---------- */
+function syncStatus(s){ const p=document.getElementById('syncPill'); if(!p) return;
+  p.className='syncpill '+s; p.textContent = s==='ok'?'cloud ✓':(s==='busy'?'sync…':'offline ⚠'); }
+
+async function loadCloud(){
+  // bewust GEEN user_state: die rij is van DMPS. Bel-taalkeuze staat lokaal.
+  const [leadsRes, sharedRes] = await Promise.all([
+    sb.from('call_leads').select('id,setter_id,data'),
+    sb.from('shared_state').select('key,value')
+  ]);
+  if(leadsRes.error){ alert('Kon bel-leads niet laden: '+leadsRes.error.message); throw leadsRes.error; }
+  state.leads = (leadsRes.data||[]).map(r=>{ const l=r.data||{}; l.id=r.id; l._setter=r.setter_id; return l; });
+  lastSync={}; state.leads.forEach(l=>{ lastSync[l.id]=leadSig(l); });
+  const sh={}; (sharedRes.data||[]).forEach(r=>sh[r.key]=r.value);
+  state.scripts = sh.call_scripts || {nl:{},en:{}};
+  if(!state.scripts.nl) state.scripts.nl={};
+  if(!state.scripts.en) state.scripts.en={};
+  state.goal = sh.call_goal || 50;
+  sharedSnap = { call_scripts:JSON.stringify(state.scripts), call_goal:JSON.stringify(state.goal) };
+  try{ state.lang = localStorage.getItem('ccs_lang') || 'nl'; }catch(_){ state.lang='nl'; }
+  lastLoad = Date.now();
+}
+
+let syncTimer=null, syncing=false, syncAgain=false;
+function saveState(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,600); syncStatus('busy'); }
+async function syncNow(){
+  syncTimer=null;
+  if(syncing){ syncAgain=true; return; }
+  syncing=true;
+  try{
+    const cur={}, ups=[];
+    state.leads.forEach(l=>{
+      if(!l._setter) l._setter=targetSetter();
+      const data=stripPrivate(l);
+      const sig=JSON.stringify({s:l._setter||null, d:data});
+      cur[l.id]=sig;
+      if(lastSync[l.id]!==sig) ups.push({id:l.id, setter_id:l._setter, data, updated_at:new Date().toISOString()});
+    });
+    const dels=Object.keys(lastSync).filter(id=>!(id in cur));
+    if(ups.length){ const {error}=await sb.from('call_leads').upsert(ups); if(error) throw error; }
+    if(dels.length){ const {error}=await sb.from('call_leads').delete().in('id',dels); if(error) throw error; }
+    lastSync=cur;
+    const sh={call_scripts:state.scripts, call_goal:state.goal};
+    for(const k in sh){
+      const j=JSON.stringify(sh[k]);
+      if(sharedSnap[k]!==j){
+        const {error}=await sb.from('shared_state').upsert({key:k, value:sh[k], updated_at:new Date().toISOString()});
+        if(error) throw error; sharedSnap[k]=j;
+      }
+    }
+    syncStatus('ok');
+  }catch(e){ console.error('[sync]',e); syncStatus('err'); }
+  syncing=false;
+  if(syncAgain){ syncAgain=false; saveState(); }
+}
+
+/* ---------- auth ---------- */
+async function doLogin(){
+  const msg=document.getElementById('authMsg'); msg.className='authmsg'; msg.textContent='Inloggen…';
+  const {error}=await sb.auth.signInWithPassword({
+    email:document.getElementById('auth-email').value.trim(),
+    password:document.getElementById('auth-pass').value
+  });
+  if(error){ msg.textContent='Inloggen mislukt: '+error.message; return; }
+  msg.textContent=''; startApp();
+}
+async function doLogout(){ await sb.auth.signOut(); location.reload(); }
+
+/* ---------- setter filter (owner) ---------- */
+function setSetterFilter(v){ setterFilter=v; renderAll(); }
+function renderSetterSwitcher(){
+  const sel=document.getElementById('setterSwitch'); if(!sel) return;
+  sel.innerHTML = `<option value="all">Hele team</option>`+
+    callSetters().map(t=>`<option value="${t.id}">${esc(t.name||t.email)}</option>`).join('');
+  sel.value=setterFilter;
+}
+
+/* ---------- app switcher ---------- */
+function toggleAppMenu(e){ e.stopPropagation(); const m=document.getElementById('appMenu'); if(m) m.classList.toggle('show'); }
+document.addEventListener('click',()=>{ const m=document.getElementById('appMenu'); if(m) m.classList.remove('show'); });
+
+/* ---------- tabs ---------- */
+function switchView(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('show',s.id==='view-'+v));
+}
+function setLang(l){ state.lang=l; try{localStorage.setItem('ccs_lang',l);}catch(_){} document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===l)); renderScripts(); }
+function setRange(r){ activeRange=r; document.querySelectorAll('#rangeToggle .range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range===r)); renderMetrics(); renderFunnel(); }
+function setPipeSearch(q){ pipeSearch=q.trim().toLowerCase(); document.getElementById('pipeSearchClear').style.display=q?'block':'none'; renderBoard(); }
+function clearPipeSearch(){ pipeSearch=''; document.getElementById('pipeSearch').value=''; document.getElementById('pipeSearchClear').style.display='none'; renderBoard(); }
+function matchSearch(l){ if(!pipeSearch) return true; return ((l.name||'')+' '+(l.phone||'')).toLowerCase().includes(pipeSearch); }
+
+function editGoal(){
+  const v=prompt('Dagdoel — gesprekken per dag:', state.goal);
+  if(v===null) return;
+  const n=parseInt(v); if(n>0){ state.goal=n; saveState(); renderAll(); }
+}
+
+/* ---------- RENDER ---------- */
+function renderAll(){ renderMetrics(); renderDaily(); renderWorklist(); renderBoard(); renderTable(); renderScripts(); renderFunnel(); renderTeam(); }
+
+function renderMetrics(){
+  const wrap=document.getElementById('metricCards'); if(!wrap) return;
+  const lbl={'7':'7d','30':'30d','90':'90d'}[activeRange]||'alles';
+  const dials=count('dialed');
+  const days=windowDays();
+  const seats=(me&&me.role==='owner'&&setterFilter==='all')?Math.max(1,callSetters().length||1):1;
+  const target=days?state.goal*days*seats:null;
+  const meets=target!==null && dials>=target;
+  const volCls=target===null?'neutral':(meets?'ok':'under');
+  let html=`<div class="mcard ${target!==null&&!meets?'alert':''}">
+    <div class="label">Gebeld · ${lbl}</div>
+    <div class="val">${dials}</div>
+    <div class="kpi">${target!==null?`Doel ${target}`:'geen doel'} <span class="tag ${volCls}">${target===null?'totaal':(meets?'op doel':'eronder')}</span></div>
+    <div class="denom">${visibleLeads().filter(l=>phaseOf(l)==='tocall').length} nog te bellen</div>
+  </div>`;
+  KPIS.forEach(k=>{
+    const r=ratio(k.num,k.den), pct=r*100, has=count(k.den)>0, meets2=pct>=k.kpi;
+    const cls=!has?'neutral':(meets2?'ok':'under'), txt=!has?'geen data':(meets2?'op doel':'eronder');
+    html+=`<div class="mcard ${has&&!meets2?'alert':''}">
+      <div class="label">${k.name}</div>
+      <div class="val">${has?fmtPct(r):'—'}</div>
+      <div class="kpi">KPI ${k.kpi}%${k.hi?('–'+k.hi+'%'):''} <span class="tag ${cls}">${txt}</span></div>
+      <div class="denom">${count(k.num)} / ${dials} gebeld</div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+  // header + dashboard dagdoel
+  const today=todayISO();
+  const dialedToday=visibleLeads().filter(l=>l.dialedDate===today).length;
+  const dayGoal=state.goal*seats;
+  document.getElementById('dialedToday').textContent=dialedToday;
+  document.getElementById('appNow').textContent=dialedToday;
+  document.getElementById('appGoal').textContent=dayGoal;
+  document.getElementById('appBar').style.width=Math.min(100,(dialedToday/dayGoal)*100)+'%';
+  // bottleneck-insight: laagst presterende KPI t.o.v. zijn doel
+  const ins=document.getElementById('bottleneckInsight');
+  if(ins){
+    const under=KPIS.map(k=>({k, has:count(k.den)>0, pct:ratio(k.num,k.den)*100})).filter(x=>x.has && x.pct<x.k.kpi);
+    if(under.length){
+      under.sort((a,b)=>(a.pct/a.k.kpi)-(b.pct/b.k.kpi));
+      const w=under[0], tip={PUR:'Bel op andere tijdstippen en vaker — meer mensen aan de lijn.',PR:'Scherp je opening aan — krijg meer gesprekken tot een pitch.',ABR:'Vraag explicieter om de afspraak, met twee concrete tijdopties.'}[w.k.key]||'';
+      ins.innerHTML=`<div class="insight"><span class="ico">⚠</span><div><b>${w.k.name}</b> staat op ${fmtPct(w.pct/100)} — onder de KPI van ${w.k.kpi}%. Grootste bottleneck nu. ${tip}</div></div>`;
+    } else ins.innerHTML='';
+  }
+}
+
+function renderDaily(){
+  const wrap=document.getElementById('dailyStrip'); if(!wrap) return;
+  const vis=visibleLeads();
+  const cells=[
+    ['Te bellen', vis.filter(l=>phaseOf(l)==='tocall').length],
+    ['Opgenomen', vis.filter(l=>phaseOf(l)==='pickup').length],
+    ['Gepitcht', vis.filter(l=>phaseOf(l)==='pitched').length],
+    ['Afspraken', vis.filter(l=>phaseOf(l)==='booked').length],
+    ['Afgesloten', vis.filter(l=>phaseOf(l)==='dead').length]
+  ];
+  wrap.innerHTML=cells.map(([lbl,n])=>`<div class="dcell"><div class="dnum">${n}</div><div class="dlbl">${lbl}</div></div>`).join('');
+}
+
+function quickFlags(l){
+  return FLAGS.map(f=>{
+    const on=!!(l.cflags&&l.cflags[f.key]);
+    return `<button class="btn ${on?'sig':'ghost'} sm" onclick="event.stopPropagation();toggleFlag('${l.id}','${f.key}')">${on?'✓ ':''}${f.label}</button>`;
+  }).join('');
+}
+function dueBadge(l){
+  if(!l.due || phaseOf(l)==='booked' || phaseOf(l)==='dead') return '';
+  const now=nowISO(); let cls='later', txt=fmtDue(l.due);
+  if(l.due<=now){ cls='today'; txt='nu'; }
+  else { const diff=(new Date(l.due)-new Date())/86400000; if(diff<=1) cls='soon'; }
+  return `<span class="due ${cls}">${txt}</span>`;
+}
+function renderWorklist(){
+  const wrap=document.getElementById('worklist'); if(!wrap) return;
+  const todo=visibleLeads().filter(l=>['tocall','pickup','pitched'].includes(phaseOf(l)))
+    .sort((a,b)=>{
+      const rank={tocall:0,pickup:1,pitched:2};
+      const pa=rank[phaseOf(a)], pb=rank[phaseOf(b)];
+      if(pa!==pb) return pa-pb;
+      return (a.due||'9')<(b.due||'9')?-1:1;
+    });
+  document.getElementById('wlCount').textContent=visibleLeads().filter(l=>phaseOf(l)==='tocall').length;
+  document.getElementById('cntWork').textContent=todo.length;
+  if(!todo.length){ wrap.innerHTML=`<div class="empty" style="padding:30px">Niets te bellen. Importeer bel-leads of voeg er één toe.</div>`; return; }
+  wrap.innerHTML=todo.slice(0,300).map(l=>{
+    const ph=CALL_PHASES[phaseOf(l)];
+    const setter=(me&&me.role==='owner')?`<span class="plat" title="Setter">🧑‍💼 ${esc(setterName(l._setter))}</span>`:'';
+    return `<div class="lead" onclick="openLead('${l.id}')" style="cursor:pointer">
+      <div class="ln">${esc(l.name||'(naamloos)')} <span class="plat" style="background:${ph.color};color:#fff;border-color:${ph.color}">${ph.label}</span></div>
+      <div class="lm">
+        <a class="link" href="${telLink(l.phone)}" onclick="event.stopPropagation()" style="font-size:13px;font-weight:700">📞 ${esc(l.phone||'—')}</a>
+        ${l.city?`<span>${esc(l.city)}</span>`:''}
+        ${l.website?`<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">site ↗</a>`:''}
+        ${l.fups?`<span class="fupbadge">${l.fups}× gebeld</span>`:''}
+        ${dueBadge(l)} ${setter}
+      </div>
+      <div class="quickrow" style="margin-top:9px">
+        ${quickFlags(l)}
+        <button class="btn ghost sm" onclick="event.stopPropagation();planCallback('${l.id}')" title="Geen gehoor → plan terugbellen">↻ Terugbellen</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBoard(){
+  const board=document.getElementById('board'); if(!board) return;
+  const cols=PHASE_ORDER.filter(p=>p!=='dead');
+  const vis=visibleLeads().filter(matchSearch);
+  board.innerHTML=cols.map(ph=>{
+    const ls=vis.filter(l=>phaseOf(l)===ph);
+    const cards= ls.length ? ls.map(l=>`<div class="lead" draggable="true" ondragstart="dragLead(event,'${l.id}')" ondragend="dragEnd(event)" onclick="openLead('${l.id}')">
+        <div class="ln">${esc(l.name||'(naamloos)')} ${dueBadge(l)}</div>
+        <div class="lm"><span style="font-family:'Space Mono',monospace;color:var(--signal)">${esc(l.phone||'')}</span>
+          ${l.cphase==='booked'&&l.callDate?`<span class="due later">📅 ${esc(l.callDate)}</span>`:''}</div>
+      </div>`).join('') : `<div class="empty">Leeg.</div>`;
+    return `<div class="col" data-phase="${ph}" ondragover="allowDrop(event)" ondragenter="event.preventDefault();this.classList.add('dragover')" ondragleave="if(event.target===this)this.classList.remove('dragover')" ondrop="dropLead(event,'${ph}')">
+      <div class="col-h"><div class="name"><span class="phase-dot" style="background:${CALL_PHASES[ph].color}"></span>${CALL_PHASES[ph].label}</div><div class="num">${ls.length}</div></div>
+      <div class="col-desc">${CALL_PHASES[ph].desc}</div>${cards}</div>`;
+  }).join('');
+  document.getElementById('cntPipe').textContent=visibleLeads().filter(l=>phaseOf(l)!=='dead' && phaseOf(l)!=='booked').length;
+}
+
+let dragId=null;
+function dragLead(e,id){ dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){} e.currentTarget.classList.add('dragging'); }
+function dragEnd(e){ e.currentTarget.classList.remove('dragging'); }
+function allowDrop(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
+function dropLead(e,phase){
+  e.preventDefault();
+  document.querySelectorAll('.col.dragover').forEach(c=>c.classList.remove('dragover'));
+  const id=dragId||(e.dataTransfer&&e.dataTransfer.getData('text/plain')); dragId=null;
+  if(id) movePhase(id,phase);
+}
+function movePhase(id,phase){
+  const l=state.leads.find(x=>x.id===id); if(!l||phaseOf(l)===phase) return;
+  l.cphase=phase; l.cflags=l.cflags||{};
+  (PHASE_FLAGS[phase]||[]).forEach(f=>l.cflags[f]=true);
+  if(phase==='booked' && !l.callDate){ const d=prompt('Datum van de afspraak (JJJJ-MM-DD):', todayISO()); if(d) l.callDate=d; l.due=''; }
+  if(phase==='dead') l.due='';
+  stampFlagDates(l);
+  saveState(); renderAll();
+}
+function toggleFlag(id,flag){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{};
+  l.cflags[flag]=!l.cflags[flag];
+  // promotie naar hoogste aangevinkte fase
+  if(l.cflags.booked) l.cphase='booked';
+  else if(l.cflags.pitched) l.cphase='pitched';
+  else if(l.cflags.pickup) l.cphase='pickup';
+  else l.cphase='tocall';
+  stampFlagDates(l);
+  saveState(); renderAll();
+}
+function planCallback(id){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{}; l.cflags.dialed=true;        // poging telt als dial
+  l.fups=(l.fups||0)+1;
+  l.due=nextCallSlot(24);
+  stampFlagDates(l);
+  saveState(); renderAll();
+}
+
+function renderTable(){
+  const body=document.getElementById('leadBody'); if(!body) return;
+  const owner=me&&me.role==='owner';
+  document.getElementById('thOwner').style.display=owner?'table-cell':'none';
+  const ls=visibleLeads().slice().sort((a,b)=>PHASE_ORDER.indexOf(phaseOf(a))-PHASE_ORDER.indexOf(phaseOf(b)));
+  document.getElementById('cntAll').textContent=visibleLeads().length;
+  if(!ls.length){ body.innerHTML=`<tr><td colspan="${owner?7:6}" style="text-align:center;color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;padding:24px">Nog geen bel-leads.</td></tr>`; return; }
+  body.innerHTML=ls.map(l=>{
+    const ph=CALL_PHASES[phaseOf(l)];
+    const setterCell=owner?`<td>${reassignSelect(l)}</td>`:'';
+    const next = phaseOf(l)==='booked' ? (l.callDate?('📅 '+esc(l.callDate)):'afspraak') : (l.due?fmtDue(l.due):(phaseOf(l)==='dead'?'—':'te bellen'));
+    return `<tr class="row" onclick="openLead('${l.id}')" style="cursor:pointer">
+      <td><span class="statusdot"><span class="sd" style="background:${ph.color}"></span>${ph.label}</span></td>
+      <td><b>${esc(l.name||'(naamloos)')}</b></td>
+      <td><a class="link" href="${telLink(l.phone)}" onclick="event.stopPropagation()">${esc(l.phone||'—')}</a></td>
+      <td>${esc(l.city||'')}</td>
+      ${setterCell}
+      <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">${next}</td>
+      <td style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();openLead('${l.id}')">✎</button></td>
+    </tr>`;
+  }).join('');
+}
+function setterOptions(currentId){
+  const opts=[{id:me.id,label:'Ik (owner)'}].concat(callSetters().map(s=>({id:s.id,label:s.name||s.email})));
+  if(currentId && !opts.some(o=>o.id===currentId)) opts.push({id:currentId, label:setterName(currentId)+' (geen toegang)'});
+  return opts;
+}
+function reassignSelect(l){
+  return `<select class="acctsel" onclick="event.stopPropagation()" onchange="reassignLead('${l.id}',this.value)">${
+    setterOptions(l._setter).map(o=>`<option value="${o.id}"${(l._setter===o.id)?' selected':''}>${esc(o.label)}</option>`).join('')
+  }</select>`;
+}
+function reassignLead(id,setterId){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l._setter=setterId; saveState(); renderAll();
+}
+
+/* ---------- scripts ---------- */
+function curScripts(){ if(!state.scripts[state.lang]) state.scripts[state.lang]={}; return state.scripts[state.lang]; }
+function renderScripts(){
+  const wrap=document.getElementById('scriptChain'); if(!wrap) return;
+  const S=curScripts();
+  wrap.innerHTML=SCRIPT_SECTIONS.map(sec=>`<div class="scard">
+    <h4>${sec.label}</h4>
+    <div class="meta">${sec.desc}</div>
+    <textarea data-script="${sec.key}" placeholder="Schrijf hier je ${sec.label.toLowerCase()}-script...">${esc(S[sec.key]||'')}</textarea>
+    <div class="savednote" id="saved-${sec.key}">opgeslagen ✓</div>
+  </div>`).join('');
+  wrap.querySelectorAll('[data-script]').forEach(t=>{
+    let timer;
+    t.addEventListener('input',()=>{
+      curScripts()[t.dataset.script]=t.value;
+      clearTimeout(timer); timer=setTimeout(()=>{ saveState(); const n=document.getElementById('saved-'+t.dataset.script); if(n){n.classList.add('show'); setTimeout(()=>n.classList.remove('show'),1200);} },500);
+    });
+  });
+}
+
+/* ---------- funnel flow ---------- */
+function renderFunnel(){
+  const wrap=document.getElementById('funnelFlow'); if(!wrap) return;
+  const tocall=visibleLeads().filter(l=>phaseOf(l)==='tocall').length;
+  let html=`<div class="board cols5" style="margin-top:6px">`;
+  FUNNEL.forEach((s,i)=>{
+    const n = s.flag ? count(s.flag) : tocall;
+    let desc = i===0 ? 'nog te bellen' : '';
+    // conversie alleen tussen twee event-stappen met dezelfde, zuivere basis (dials→pickup→pitch→booked)
+    if(i>=2 && FUNNEL[i-1].flag){
+      const denom=count(FUNNEL[i-1].flag);
+      desc = denom>0 ? Math.round(100*count(s.flag)/denom)+'% van vorige stap' : '—';
+    }
+    html+=`<div class="col"><div class="col-h"><div class="name">${s.label}</div><div class="num">${n}</div></div>
+      <div class="col-desc">${desc}</div></div>`;
+  });
+  html+=`</div>`;
+  wrap.innerHTML=html;
+}
+
+/* ---------- team / access (owner) ---------- */
+function renderTeam(){
+  if(!me||me.role!=='owner') return;
+  const accessBox=document.getElementById('accessRow');
+  const setters=team.filter(t=>t.role==='setter');
+  if(accessBox){
+    accessBox.innerHTML = setters.length
+      ? setters.map(s=>`<button class="btn ${s.can_cold_call?'sig':'ghost'} sm" onclick="setCanCall('${s.id}',${s.can_cold_call?'false':'true'})">${s.can_cold_call?'✓ ':''}${esc(s.name||s.email)}</button>`).join('')
+      : `<span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Nog geen setters in het team.</span>`;
+  }
+  const ts=document.getElementById('teamStats');
+  if(ts){
+    const rows=callSetters().map(s=>{
+      const own=state.leads.filter(l=>(l._setter||me.id)===s.id);
+      const dials=own.filter(l=>l.cflags&&l.cflags.dialed).length;
+      const booked=own.filter(l=>l.cflags&&l.cflags.booked).length;
+      return `<tr class="row" onclick="setSetterFilter('${s.id}');switchView('dash')" style="cursor:pointer">
+        <td><b>${esc(s.name||s.email)}</b></td><td>${own.length}</td><td>${dials}</td><td>${booked}</td></tr>`;
+    }).join('');
+    ts.innerHTML = callSetters().length
+      ? `<table><thead><tr><th>Setter</th><th>Leads</th><th>Gebeld</th><th>Afspraken</th></tr></thead><tbody>${rows}</tbody></table>`
+      : `<div class="empty">Nog geen cold-call setters. Vink iemand aan hierboven.</div>`;
+  }
+}
+async function setCanCall(id,val){
+  const v=(val===true||val==='true');
+  const {error}=await sb.from('profiles').update({can_cold_call:v}).eq('id',id);
+  if(error){ alert('Kon toegang niet wijzigen: '+error.message); return; }
+  const p=team.find(t=>t.id===id); if(p) p.can_cold_call=v;
+  renderSetterSwitcher(); renderTeam();
+}
+
+/* ---------- lead modal ---------- */
+function openLead(id){
+  editingId=id||null;
+  const l=id?state.leads.find(x=>x.id===id):null;
+  document.getElementById('modalTitle').textContent=l?'Bel-lead bewerken':'Nieuwe bel-lead';
+  document.getElementById('delBtn').style.display=l?'inline-block':'none';
+  document.getElementById('f-name').value=l?.name||'';
+  document.getElementById('f-phone').value=l?.phone||'';
+  document.getElementById('f-city').value=l?.city||'';
+  document.getElementById('f-website').value=l?.website||'';
+  document.getElementById('f-fups').value=l?.fups||0;
+  document.getElementById('f-due').value=l?.due ? (l.due.length>10?l.due:l.due+'T09:00') : '';
+  document.getElementById('f-calldate').value=l?.callDate||'';
+  document.getElementById('f-lang').value=(l?.lang==='nl'||l?.lang==='en')?l.lang:'';
+  document.getElementById('f-notes').value=l?.notes||'';
+  // owner: setter-keuze
+  const sw=document.getElementById('f-setterWrap');
+  if(me&&me.role==='owner'){
+    sw.style.display='block';
+    const cur=(l&&l._setter)?l._setter:me.id;
+    document.getElementById('f-setter').innerHTML=setterOptions(cur).map(o=>`<option value="${o.id}">${esc(o.label)}</option>`).join('');
+    document.getElementById('f-setter').value=cur;
+  } else { sw.style.display='none'; }
+  modalPhase=l?phaseOf(l):'tocall';
+  modalFlags=Object.assign({}, l?.cflags||{});
+  renderStepper(); renderFlags();
+  document.getElementById('scrim').classList.add('show');
+}
+function closeLead(){ document.getElementById('scrim').classList.remove('show'); editingId=null; }
+function renderStepper(){
+  document.getElementById('phaseStepper').innerHTML=PHASE_ORDER.map(k=>
+    `<div class="step ${modalPhase===k?'on':''}" data-cph="${k}" onclick="setModalPhase('${k}')">${CALL_PHASES[k].label}</div>`).join('');
+}
+function setModalPhase(ph){ modalPhase=ph; (PHASE_FLAGS[ph]||[]).forEach(f=>modalFlags[f]=true); renderStepper(); renderFlags(); }
+function renderFlags(){
+  document.getElementById('flagRow').innerHTML=FLAGS.map(f=>{
+    const on=!!modalFlags[f.key];
+    return `<button class="btn ${on?'sig':'ghost'} sm" onclick="toggleModalFlag('${f.key}')">${on?'✓ ':''}${f.label}</button>`;
+  }).join('');
+}
+function toggleModalFlag(k){ modalFlags[k]=!modalFlags[k]; renderFlags(); }
+function saveLead(){
+  const lead={
+    id: editingId || ('C'+Date.now()+Math.random().toString(36).slice(2,6)),
+    name: document.getElementById('f-name').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    city: document.getElementById('f-city').value.trim(),
+    website: document.getElementById('f-website').value.trim(),
+    cphase: modalPhase,
+    cflags: modalFlags,
+    fups: Math.max(0,parseInt(document.getElementById('f-fups').value)||0),
+    due: document.getElementById('f-due').value,
+    callDate: document.getElementById('f-calldate').value,
+    notes: document.getElementById('f-notes').value.trim()
+  };
+  const lng=document.getElementById('f-lang').value; if(lng) lead.lang=lng;
+  if(editingId){
+    const i=state.leads.findIndex(x=>x.id===editingId), prev=state.leads[i];
+    lead._setter = (me&&me.role==='owner') ? document.getElementById('f-setter').value : (prev._setter||targetSetter());
+    ['dialedDate','pickupDate','pitchedDate','bookedDate'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
+    stampFlagDates(lead);
+    state.leads[i]=lead;
+  } else {
+    lead._setter = (me&&me.role==='owner') ? document.getElementById('f-setter').value : targetSetter();
+    stampFlagDates(lead);
+    state.leads.push(lead);
+  }
+  saveState(); closeLead(); renderAll();
+}
+function deleteLead(){
+  if(!editingId) return;
+  if(!confirm('Deze bel-lead verwijderen?')) return;
+  state.leads=state.leads.filter(x=>x.id!==editingId);
+  saveState(); closeLead(); renderAll();
+}
+
+/* ---------- import ---------- */
+let importStaged=[];
+function openImport(){
+  document.getElementById('imp-text').value=''; document.getElementById('csvName').textContent=''; importStaged=[];
+  const sw=document.getElementById('impSetterWrap');
+  if(me&&me.role==='owner'){
+    sw.style.display='block';
+    const opts=[{id:me.id,label:'Ik (owner)'}].concat(callSetters().map(s=>({id:s.id,label:s.name||s.email})));
+    document.getElementById('imp-setter').innerHTML=opts.map(o=>`<option value="${o.id}">${esc(o.label)}</option>`).join('');
+  } else sw.style.display='none';
+  impTab('paste'); updateImpCount();
+  document.getElementById('impScrim').classList.add('show');
+}
+function closeImport(){ document.getElementById('impScrim').classList.remove('show'); }
+function impTab(t){
+  document.querySelectorAll('.imp-tab').forEach(b=>b.classList.toggle('active',b.dataset.imp===t));
+  document.querySelectorAll('.imp-pane').forEach(p=>p.classList.toggle('show',p.id==='imp-'+t));
+}
+function parsePaste(){
+  importStaged=document.getElementById('imp-text').value.split('\n').map(line=>{
+    const p=line.split(/[,\t]/).map(s=>s.trim());
+    if(!p[0]||!p[1]) return null;
+    return {name:p[0], phone:p[1], city:p[2]||'', website:p[3]||''};
+  }).filter(Boolean);
+  updateImpCount();
+}
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length) return;
+  const head=lines[0].toLowerCase();
+  const hasHeader=/naam|name|tel|phone|company/.test(head);
+  const rows=hasHeader?lines.slice(1):lines;
+  // kolom-detectie
+  let ni=0, pi=1, ci=2, wi=3;
+  if(hasHeader){
+    const cols=lines[0].split(/[,;\t]/).map(s=>s.trim().toLowerCase());
+    const find=(...keys)=>cols.findIndex(c=>keys.some(k=>c.includes(k)));
+    ni=Math.max(0,find('naam','name','company','bedrijf'));
+    pi=Math.max(1,find('tel','phone','nummer'));
+    ci=find('plaats','city','stad'); wi=find('web','site','url');
+  }
+  importStaged=rows.map(line=>{
+    const p=line.split(/[,;\t]/).map(s=>s.trim().replace(/^"|"$/g,''));
+    if(!p[ni]||!p[pi]) return null;
+    return {name:p[ni], phone:p[pi], city:(ci>=0?p[ci]:'')||'', website:(wi>=0?p[wi]:'')||''};
+  }).filter(Boolean);
+  updateImpCount();
+}
+function updateImpCount(){
+  document.getElementById('impCount').textContent=importStaged.length+' leads klaar';
+  document.getElementById('impBtn').disabled=!importStaged.length;
+}
+function runImport(){
+  if(!importStaged.length) return;
+  const setter=(me&&me.role==='owner')?document.getElementById('imp-setter').value:targetSetter();
+  importStaged.forEach((r,i)=>{
+    state.leads.push({ id:'C'+Date.now()+i+Math.random().toString(36).slice(2,5),
+      name:r.name, phone:r.phone, city:r.city, website:r.website, cphase:'tocall', cflags:{}, fups:0, due:'', notes:'', _setter:setter });
+  });
+  saveState(); closeImport(); renderAll(); switchView('dash');
+}
+
+/* ---------- boot ---------- */
+let booted=false;
+async function startApp(){
+  if(booted) return; booted=true;
+  for(let i=0;i<6 && !me;i++){
+    const {data:{user}}=await sb.auth.getUser();
+    if(!user) break;
+    const {data:p}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+    if(p){ me=p; break; }
+    await new Promise(r=>setTimeout(r,700));
+  }
+  if(!me){ booted=false; document.getElementById('authMsg').textContent='Profiel niet gevonden — probeer opnieuw.'; await sb.auth.signOut(); return; }
+  document.getElementById('authScrim').classList.remove('show');
+  if(!canCall()){ document.getElementById('noAccessScrim').classList.add('show'); return; }
+  document.getElementById('userName').textContent=me.name||me.email;
+  document.getElementById('userRole').textContent=me.role==='owner'?'OWNER':'SETTER';
+  if(me.role==='owner'){
+    const {data:t}=await sb.from('profiles').select('*').order('created_at');
+    team=t||[me];
+    document.getElementById('setterPill').style.display='flex';
+    document.getElementById('tabTeam').style.display='inline-block';
+    renderSetterSwitcher();
+  } else { team=[me]; }
+  await loadCloud();
+  initUI();
+  renderAll();
+}
+function initUI(){
+  document.getElementById('todayStr').textContent=new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'short'});
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchView(t.dataset.view)));
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===state.lang));
+  document.querySelectorAll('#rangeToggle .range-btn').forEach(b=>b.addEventListener('click',()=>setRange(b.dataset.range)));
+  document.getElementById('scrim').addEventListener('click',e=>{ if(e.target.id==='scrim') closeLead(); });
+  document.getElementById('impScrim').addEventListener('click',e=>{ if(e.target.id==='impScrim') closeImport(); });
+  document.getElementById('imp-text').addEventListener('input', parsePaste);
+  const fi=document.getElementById('csvFile');
+  fi.addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return; document.getElementById('csvName').textContent=f.name; const rd=new FileReader(); rd.onload=()=>parseCSV(rd.result); rd.readAsText(f); });
+  const dz=document.getElementById('dropZone');
+  ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');}));
+  dz.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(!f) return; document.getElementById('csvName').textContent=f.name; const rd=new FileReader(); rd.onload=()=>parseCSV(rd.result); rd.readAsText(f); });
+  window.addEventListener('focus', async ()=>{
+    if(!me||syncing||syncTimer||Date.now()-lastLoad<60000) return;
+    try{ await loadCloud(); renderAll(); }catch(e){ console.error(e); }
+  });
+}
+(async function(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){ startApp(); }
+  ['auth-pass','auth-email'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); }); });
+})();
+</script>
+</body>
+</html>
