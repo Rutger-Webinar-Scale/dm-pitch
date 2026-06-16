@@ -394,7 +394,7 @@
       <div class="pill"><span class="dotlive"></span> Live <b id="todayStr"></b></div>
       <div class="pill" id="userPill" style="gap:6px"><b id="userName"></b> <span id="userRole" style="background:var(--signal);color:#fff;border-radius:20px;font-size:9px;padding:1px 7px"></span></div>
       <div class="pill" id="setterPill" style="display:none;padding:5px 8px 5px 13px">🧑‍💼 <select id="setterSwitch" onchange="setSetterFilter(this.value)" style="border:none;background:none;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ink);outline:none"></select></div>
-      <div class="pill">Vandaag gebeld <b id="dialedToday">0</b></div>
+      <div class="pill">Deze week gebeld <b id="dialedToday">0</b></div>
       <span class="syncpill ok" id="syncPill">cloud ✓</span>
       <button class="btn ghost" onclick="openImport()">⇪ Importeer</button>
       <button class="btn sig" onclick="openLead()">+ Bel-lead</button>
@@ -415,8 +415,8 @@
   <section class="view show" id="view-dash">
     <div class="target">
       <div>
-        <div class="tlabel" id="goalLabel">Jouw dagdoel — gesprekken vandaag</div>
-        <div class="big"><span id="appNow">0</span> / <span id="appGoal">50</span></div>
+        <div class="tlabel" id="goalLabel">Jouw weekdoel — gesprekken deze week</div>
+        <div class="big"><span id="appNow">0</span> / <span id="appGoal">100</span></div>
       </div>
       <div class="bar"><i id="appBar" style="width:0%"></i></div>
       <button class="btn ghost sm" id="goalEditBtn" style="border-color:var(--paper);color:var(--paper)" onclick="editGoal()">Doel aanpassen</button>
@@ -443,7 +443,7 @@
       <input class="gifinput" id="pipeSearch" style="width:100%;padding-right:60px" placeholder="🔍 Zoek op naam of nummer…" oninput="setPipeSearch(this.value)">
       <button id="pipeSearchClear" onclick="clearPipeSearch()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px" title="Wissen">✕</button>
     </div>
-    <div class="board cols4" id="board" style="margin-top:14px"></div>
+    <div class="board" id="board" style="margin-top:14px"></div>
   </section>
 
   <!-- ================= LEADS ================= -->
@@ -535,7 +535,7 @@
       <label class="f">Fase</label>
       <div class="stepper" id="phaseStepper"></div>
       <div class="grid2">
-        <div><label class="f">Belpogingen</label><input class="f" id="f-fups" type="number" min="0" value="0"></div>
+        <div><label class="f">Belpogingen (max 8)</label><input class="f" id="f-calls" type="number" min="0" max="8" value="0"></div>
         <div><label class="f">Volgende belmoment</label><input class="f" id="f-due" type="datetime-local"></div>
       </div>
       <div class="grid2">
@@ -556,6 +556,8 @@
       <div class="quickrow" id="flagRow"></div>
       <label class="f">Notities</label>
       <textarea class="f" id="f-notes" style="min-height:60px" placeholder="Bezwaren, beste belmoment, wat hielp..."></textarea>
+      <label class="f" style="margin-top:18px">📞 Belscript — gepersonaliseerd voor deze lead</label>
+      <div id="f-scriptpanel"></div>
     </div>
     <div class="modal-foot">
       <button class="btn ghost sm" id="delBtn" onclick="deleteLead()" style="border-color:var(--bad);color:var(--bad)">Verwijder</button>
@@ -647,14 +649,17 @@ Cor the Coach, +31 6 18377278, Rotterdam"></textarea>
    COLD CALLING SYSTEM — losse single-file app. Deelt alleen Supabase
    (auth + profiles) met het DM Pitch System. Eigen tabel: call_leads.
    ===================================================================== */
+// Pipeline = alleen fases waar een lead écht in blijft staan.
+// 'Opgenomen'/'Gepitcht' zijn events (knoppen/KPI's), GEEN fases.
 const CALL_PHASES = {
-  tocall:  {label:'Te bellen',  color:'var(--intent)',  desc:'Nog niet (succesvol) gesproken'},
-  pickup:  {label:'Opgenomen',  color:'var(--engaged)', desc:'Opgenomen — gesprek gaande'},
-  pitched: {label:'Gepitcht',   color:'var(--signal)',  desc:'Pitch gegeven'},
-  booked:  {label:'Afspraak',   color:'var(--booked)',  desc:'Afspraak ingepland'},
-  dead:    {label:'Afgesloten', color:'var(--muted)',   desc:'Niet bereikt / geen interesse'}
+  tocall:   {label:'Te bellen',  color:'var(--intent)',  desc:'Nieuw — nog niet gebeld'},
+  followup: {label:'Follow-up',  color:'var(--engaged)', desc:'Gebeld — opnieuw bellen (max 8×)'},
+  booked:   {label:'Afspraak',   color:'var(--booked)',  desc:'Meeting geboekt'},
+  dead:     {label:'Afgesloten', color:'var(--muted)',   desc:'Niet meer bellen'}
 };
-const PHASE_ORDER = ['tocall','pickup','pitched','booked','dead'];
+const PHASE_ORDER = ['tocall','followup','booked','dead'];
+const BOARD_COLS  = ['tocall','followup','booked'];   // Afgesloten niet op het bord
+const MAX_CALLS   = 8;                                 // maximaal 8 belpogingen
 const FLAGS = [
   {key:'dialed',  label:'Gebeld'},
   {key:'pickup',  label:'Opgenomen'},
@@ -668,11 +673,11 @@ const KPIS = [
   {key:'PR',  name:'Pitch Rate (PR)',      num:'pitched', den:'dialed', kpi:5, hi:10},
   {key:'ABR', name:'Appt. Booking (ABR)',  num:'booked',  den:'dialed', kpi:2}
 ];
+// fase → flags die automatisch aanstaan (modal-stepper + slepen)
 const PHASE_FLAGS = {
-  tocall:[], pickup:['dialed','pickup'], pitched:['dialed','pickup','pitched'],
-  booked:['dialed','pickup','pitched','booked'], dead:[]
+  tocall:[], followup:['dialed'], booked:['dialed','pickup','booked'], dead:[]
 };
-// funnel-stappen voor de doorstroom-weergave
+// funnel-stappen voor de doorstroom-weergave (events, niet fases)
 const FUNNEL = [
   {label:'Te bellen', flag:null, phase:'tocall'},
   {label:'Gebeld',    flag:'dialed'},
@@ -680,18 +685,31 @@ const FUNNEL = [
   {label:'Gepitcht',  flag:'pitched'},
   {label:'Afspraak',  flag:'booked'}
 ];
+// bel-script secties (geseed uit het WebinarScale-doc; {{voornaam}} = naam van wie je belt)
 const SCRIPT_SECTIONS = [
-  {key:'opening',    label:'1 · Opening',          desc:'De eerste 10 seconden — pattern interrupt + reden van bellen'},
-  {key:'pitch',      label:'2 · Pitch',            desc:'Kort en scherp — wat je doet en waarom het relevant is'},
-  {key:'objections', label:'3 · Bezwaren',         desc:'Veelgehoorde bezwaren + je antwoord erop'},
-  {key:'booking',    label:'4 · Afspraak maken',   desc:'De call vragen — concreet, twee opties qua tijd'}
+  {key:'opening',    label:'1 · Opening',            desc:'Permission-based opening — de eerste 30 seconden'},
+  {key:'pitch_pull', label:'2 · Pitch — Pull',       desc:'Probleemgericht: begin met de pijn'},
+  {key:'pitch_push', label:'3 · Pitch — Push',       desc:'Resultaatgericht: begin met de oplossing'},
+  {key:'negatief',   label:'4 · Negatieve reactie',  desc:'Wat te zeggen bij weerstand / geen interesse'},
+  {key:'positief',   label:'5 · Positieve reactie',  desc:'Pijn opbouwen + dieper op het probleem'},
+  {key:'booking',    label:'6 · Afspraak boeken',    desc:'De call vastzetten — mini-contract'},
+  {key:'voicemail',  label:'7 · Voicemail',          desc:'Cut-off voicemail + terugbel-opvang'}
 ];
+// vul {{voornaam}} (en losse John/Mark/(naam)) met de voornaam van de lead
+function personalize(txt, lead){
+  const v = (lead && (lead.firstName || (lead.name||'').trim().split(/\s+/)[0])) || '';
+  const name = v || '(voornaam)';
+  return (txt||'')
+    .replace(/\{\{\s*(voornaam|first[._ ]?name|naam)\s*\}\}/gi, name)
+    .replace(/\b(John|Mark)\b/g, name)
+    .replace(/\(naam\)/gi, name);
+}
 
 const SUPABASE_URL  = 'https://vpytvszdaepvaaclwuao.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZweXR2c3pkYWVwdmFhY2x3dWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4Mjg1MjQsImV4cCI6MjA5NjQwNDUyNH0.1F2_0ZIlMwGBQVqCQdJA3JRjddLQNU3DEqoulGWOk0k';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-let state = { leads:[], scripts:{nl:{},en:{}}, goal:50, lang:'nl' };
+let state = { leads:[], scripts:{nl:{},en:{}}, goal:100, lang:'nl' };  // goal = gesprekken per WEEK
 let me=null, team=[], setterFilter='all';
 let lastSync={}, sharedSnap={}, lastLoad=0;
 let activeRange='30';
@@ -700,6 +718,7 @@ let pipeSearch='';
 
 /* ---------- helpers ---------- */
 const todayISO = ()=> new Date().toISOString().slice(0,10);
+function weekStartISO(){ const d=new Date(); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.toISOString().slice(0,10); } // maandag
 function toLocalISO(d){ const p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
 function nowISO(){ return toLocalISO(new Date()); }
@@ -721,7 +740,9 @@ function phoneHTML(l, big){
 }
 function canCall(){ return !!me && (me.role==='owner' || me.can_cold_call); }
 function setterName(id){ const p=team.find(t=>t.id===id); return p?(p.name||p.email):'?'; }
-function phaseOf(l){ return CALL_PHASES[l.cphase] ? l.cphase : 'tocall'; }
+function phaseOf(l){ let p=l.cphase; if(p==='pickup'||p==='pitched') p='followup'; return CALL_PHASES[p] ? p : 'tocall'; }
+function callsOf(l){ return l.calls || 0; }
+function callsBadge(l){ const n=callsOf(l); return n?`<span class="fupbadge">📞 ${n}/${MAX_CALLS}</span>`:''; }
 function leadLang(l){ return (l && (l.lang==='nl'||l.lang==='en')) ? l.lang : state.lang; }
 
 function windowBounds(){
@@ -791,7 +812,7 @@ async function loadCloud(){
   state.scripts = sh.call_scripts || {nl:{},en:{}};
   if(!state.scripts.nl) state.scripts.nl={};
   if(!state.scripts.en) state.scripts.en={};
-  state.goal = sh.call_goal || 50;
+  state.goal = sh.call_goal || 100;
   sharedSnap = { call_scripts:JSON.stringify(state.scripts), call_goal:JSON.stringify(state.goal) };
   try{ state.lang = localStorage.getItem('ccs_lang') || 'nl'; }catch(_){ state.lang='nl'; }
   lastLoad = Date.now();
@@ -867,7 +888,7 @@ function clearPipeSearch(){ pipeSearch=''; document.getElementById('pipeSearch')
 function matchSearch(l){ if(!pipeSearch) return true; return ((l.name||'')+' '+(l.phone||'')).toLowerCase().includes(pipeSearch); }
 
 function editGoal(){
-  const v=prompt('Dagdoel — gesprekken per dag:', state.goal);
+  const v=prompt('Weekdoel — gesprekken per week:', state.goal);
   if(v===null) return;
   const n=parseInt(v); if(n>0){ state.goal=n; saveState(); renderAll(); }
 }
@@ -881,7 +902,7 @@ function renderMetrics(){
   const dials=count('dialed');
   const days=windowDays();
   const seats=(me&&me.role==='owner'&&setterFilter==='all')?Math.max(1,callSetters().length||1):1;
-  const target=days?state.goal*days*seats:null;
+  const target=days?Math.round(state.goal*days/7*seats):null;  // weekdoel geschaald naar venster
   const meets=target!==null && dials>=target;
   const volCls=target===null?'neutral':(meets?'ok':'under');
   let html=`<div class="mcard ${target!==null&&!meets?'alert':''}">
@@ -901,14 +922,14 @@ function renderMetrics(){
     </div>`;
   });
   wrap.innerHTML=html;
-  // header + dashboard dagdoel
-  const today=todayISO();
-  const dialedToday=visibleLeads().filter(l=>l.dialedDate===today).length;
-  const dayGoal=state.goal*seats;
-  document.getElementById('dialedToday').textContent=dialedToday;
-  document.getElementById('appNow').textContent=dialedToday;
-  document.getElementById('appGoal').textContent=dayGoal;
-  document.getElementById('appBar').style.width=Math.min(100,(dialedToday/dayGoal)*100)+'%';
+  // header + dashboard WEEKdoel (100/week)
+  const wkStart=weekStartISO();
+  const dialedWeek=visibleLeads().filter(l=>l.dialedDate && l.dialedDate>=wkStart).length;
+  const weekGoal=state.goal*seats;
+  document.getElementById('dialedToday').textContent=dialedWeek;
+  document.getElementById('appNow').textContent=dialedWeek;
+  document.getElementById('appGoal').textContent=weekGoal;
+  document.getElementById('appBar').style.width=Math.min(100,(dialedWeek/weekGoal)*100)+'%';
   // bottleneck-insight: laagst presterende KPI t.o.v. zijn doel
   const ins=document.getElementById('bottleneckInsight');
   if(ins){
@@ -926,19 +947,27 @@ function renderDaily(){
   const vis=visibleLeads();
   const cells=[
     ['Te bellen', vis.filter(l=>phaseOf(l)==='tocall').length],
-    ['Opgenomen', vis.filter(l=>phaseOf(l)==='pickup').length],
-    ['Gepitcht', vis.filter(l=>phaseOf(l)==='pitched').length],
+    ['Follow-up', vis.filter(l=>phaseOf(l)==='followup').length],
     ['Afspraken', vis.filter(l=>phaseOf(l)==='booked').length],
     ['Afgesloten', vis.filter(l=>phaseOf(l)==='dead').length]
   ];
   wrap.innerHTML=cells.map(([lbl,n])=>`<div class="dcell"><div class="dnum">${n}</div><div class="dlbl">${lbl}</div></div>`).join('');
 }
 
-function quickFlags(l){
-  return FLAGS.map(f=>{
-    const on=!!(l.cflags&&l.cflags[f.key]);
-    return `<button class="btn ${on?'sig':'ghost'} sm" onclick="event.stopPropagation();toggleFlag('${l.id}','${f.key}')">${on?'✓ ':''}${f.label}</button>`;
-  }).join('');
+function callActions(l){
+  const ph=phaseOf(l);
+  if(ph==='booked'){
+    return `<span class="due later">📅 ${esc(l.callDate||'afspraak')}</span>
+      <button class="btn ghost sm" onclick="event.stopPropagation();stopCalling('${l.id}')">Afsluiten</button>
+      <button class="btn ghost sm" title="Verwijder" onclick="event.stopPropagation();deleteRow('${l.id}')" style="border-color:var(--bad);color:var(--bad)">🗑</button>`;
+  }
+  return `
+    <button class="btn ghost sm" onclick="event.stopPropagation();noAnswer('${l.id}')" title="Niet opgenomen → follow-up">📵 Niet opgenomen</button>
+    <button class="btn ghost sm" onclick="event.stopPropagation();markPickup('${l.id}')" title="Opgenomen">☎️ Opgenomen</button>
+    <button class="btn ghost sm" onclick="event.stopPropagation();markPitched('${l.id}')" title="Pitch gegeven">🎤 Gepitcht</button>
+    <button class="btn sig sm" onclick="event.stopPropagation();bookMeeting('${l.id}')" title="Afspraak geboekt">📅 Afspraak</button>
+    <button class="btn ghost sm" onclick="event.stopPropagation();stopCalling('${l.id}')" title="Niet meer bellen" style="border-color:var(--bad);color:var(--bad)">⛔ Niet meer bellen</button>
+    <button class="btn ghost sm" onclick="event.stopPropagation();deleteRow('${l.id}')" title="Verwijder (niet relevant)" style="border-color:var(--bad);color:var(--bad)">🗑</button>`;
 }
 function dueBadge(l){
   if(!l.due || phaseOf(l)==='booked' || phaseOf(l)==='dead') return '';
@@ -949,10 +978,10 @@ function dueBadge(l){
 }
 function renderWorklist(){
   const wrap=document.getElementById('worklist'); if(!wrap) return;
-  const todo=visibleLeads().filter(l=>['tocall','pickup','pitched'].includes(phaseOf(l)))
+  const todo=visibleLeads().filter(l=>['tocall','followup'].includes(phaseOf(l)))
     .sort((a,b)=>{
-      const rank={tocall:0,pickup:1,pitched:2};
-      const pa=rank[phaseOf(a)], pb=rank[phaseOf(b)];
+      // follow-ups die nu/over-tijd zijn eerst, dan nieuwe te-bellen, dan op belmoment
+      const pa=phaseOf(a)==='followup'?0:1, pb=phaseOf(b)==='followup'?0:1;
       if(pa!==pb) return pa-pb;
       return (a.due||'9')<(b.due||'9')?-1:1;
     });
@@ -967,28 +996,27 @@ function renderWorklist(){
       <div class="lm">
         ${phoneHTML(l, true)}
         ${l.city?`<span>${esc(l.city)}</span>`:''}
+        ${l.company?`<span>${esc(l.company)}</span>`:''}
         ${l.website?`<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">site ↗</a>`:''}
-        ${l.fups?`<span class="fupbadge">${l.fups}× gebeld</span>`:''}
+        ${callsBadge(l)}
         ${dueBadge(l)} ${setter}
       </div>
-      <div class="quickrow" style="margin-top:9px">
-        ${quickFlags(l)}
-        <button class="btn ghost sm" onclick="event.stopPropagation();planCallback('${l.id}')" title="Geen gehoor → plan terugbellen">↻ Terugbellen</button>
-      </div>
+      <div class="quickrow" style="margin-top:9px">${callActions(l)}</div>
     </div>`;
   }).join('');
 }
 
 function renderBoard(){
   const board=document.getElementById('board'); if(!board) return;
-  const cols=PHASE_ORDER.filter(p=>p!=='dead');
+  const cols=BOARD_COLS;
   const vis=visibleLeads().filter(matchSearch);
   board.innerHTML=cols.map(ph=>{
     const ls=vis.filter(l=>phaseOf(l)===ph);
     const cards= ls.length ? ls.map(l=>`<div class="lead" draggable="true" ondragstart="dragLead(event,'${l.id}')" ondragend="dragEnd(event)" onclick="openLead('${l.id}')">
         <div class="ln">${esc(l.name||'(naamloos)')} ${dueBadge(l)}</div>
         <div class="lm"><span style="font-family:'Space Mono',monospace;color:var(--signal)">${esc(l.phone||'')}</span>
-          ${l.cphase==='booked'&&l.callDate?`<span class="due later">📅 ${esc(l.callDate)}</span>`:''}</div>
+          ${callsBadge(l)}
+          ${phaseOf(l)==='booked'&&l.callDate?`<span class="due later">📅 ${esc(l.callDate)}</span>`:''}</div>
       </div>`).join('') : `<div class="empty">Leeg.</div>`;
     return `<div class="col" data-phase="${ph}" ondragover="allowDrop(event)" ondragenter="event.preventDefault();this.classList.add('dragover')" ondragleave="if(event.target===this)this.classList.remove('dragover')" ondrop="dropLead(event,'${ph}')">
       <div class="col-h"><div class="name"><span class="phase-dot" style="background:${CALL_PHASES[ph].color}"></span>${CALL_PHASES[ph].label}</div><div class="num">${ls.length}</div></div>
@@ -1011,29 +1039,53 @@ function movePhase(id,phase){
   const l=state.leads.find(x=>x.id===id); if(!l||phaseOf(l)===phase) return;
   l.cphase=phase; l.cflags=l.cflags||{};
   (PHASE_FLAGS[phase]||[]).forEach(f=>l.cflags[f]=true);
-  if(phase==='booked' && !l.callDate){ const d=prompt('Datum van de afspraak (JJJJ-MM-DD):', todayISO()); if(d) l.callDate=d; l.due=''; }
-  if(phase==='dead') l.due='';
+  if(phase==='booked'){ if(!l.callDate){ const d=prompt('Datum van de afspraak (JJJJ-MM-DD):', todayISO()); if(d) l.callDate=d; } l.due=''; }
+  else if(phase==='dead') l.due='';
+  else if(phase==='followup' && !l.due) l.due=nextCallSlot(24);
   stampFlagDates(l);
   saveState(); renderAll();
 }
-function toggleFlag(id,flag){
+/* ---------- bel-acties (events, geen fases) ---------- */
+// Niet opgenomen → poging telt, naar follow-up, plan terugbellen; auto-afsluiten na 8×
+function noAnswer(id){
   const l=state.leads.find(x=>x.id===id); if(!l) return;
-  l.cflags=l.cflags||{};
-  l.cflags[flag]=!l.cflags[flag];
-  // promotie naar hoogste aangevinkte fase
-  if(l.cflags.booked) l.cphase='booked';
-  else if(l.cflags.pitched) l.cphase='pitched';
-  else if(l.cflags.pickup) l.cphase='pickup';
-  else l.cphase='tocall';
-  stampFlagDates(l);
+  l.cflags=l.cflags||{}; l.cflags.dialed=true;
+  l.calls=callsOf(l)+1;
+  if(l.calls>=MAX_CALLS){ l.cphase='dead'; l.due=''; l.closedReason='max pogingen ('+MAX_CALLS+'×)'; }
+  else { l.cphase='followup'; l.due=nextCallSlot(24); }
+  stampFlagDates(l); saveState(); renderAll();
+}
+function markPickup(id){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{}; l.cflags.dialed=l.cflags.pickup=true;
+  l.calls=Math.max(callsOf(l),1);
+  l.cphase='followup'; if(!l.due) l.due=nextCallSlot(48);
+  stampFlagDates(l); saveState(); renderAll();
+}
+function markPitched(id){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{}; l.cflags.dialed=l.cflags.pickup=l.cflags.pitched=true;
+  l.calls=Math.max(callsOf(l),1);
+  l.cphase='followup'; if(!l.due) l.due=nextCallSlot(48);
+  stampFlagDates(l); saveState(); renderAll();
+}
+function bookMeeting(id){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{}; l.cflags.dialed=l.cflags.pickup=l.cflags.booked=true;
+  l.calls=Math.max(callsOf(l),1);
+  l.cphase='booked'; l.due='';
+  if(!l.callDate){ const d=prompt('Datum van de afspraak (JJJJ-MM-DD):', todayISO()); if(d) l.callDate=d; }
+  stampFlagDates(l); saveState(); renderAll();
+}
+function stopCalling(id){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cphase='dead'; l.due=''; if(!l.closedReason) l.closedReason='niet meer bellen';
   saveState(); renderAll();
 }
-function planCallback(id){
+function deleteRow(id){
   const l=state.leads.find(x=>x.id===id); if(!l) return;
-  l.cflags=l.cflags||{}; l.cflags.dialed=true;        // poging telt als dial
-  l.fups=(l.fups||0)+1;
-  l.due=nextCallSlot(24);
-  stampFlagDates(l);
+  if(!confirm(`"${l.name||'deze lead'}" verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
+  state.leads=state.leads.filter(x=>x.id!==id);
   saveState(); renderAll();
 }
 
@@ -1055,7 +1107,8 @@ function renderTable(){
       <td>${esc(l.city||'')}</td>
       ${setterCell}
       <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">${next}</td>
-      <td style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();openLead('${l.id}')">✎</button></td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="event.stopPropagation();openLead('${l.id}')">✎</button>
+        <button class="btn ghost sm" title="Verwijder" onclick="event.stopPropagation();deleteRow('${l.id}')" style="border-color:var(--bad);color:var(--bad)">🗑</button></td>
     </tr>`;
   }).join('');
 }
@@ -1161,7 +1214,7 @@ function openLead(id){
   document.getElementById('f-city').value=l?.city||'';
   document.getElementById('f-website').value=l?.website||'';
   document.getElementById('f-website-link').innerHTML = l?.website ? `<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener">↗ open website</a>` : '';
-  document.getElementById('f-fups').value=l?.fups||0;
+  document.getElementById('f-calls').value=l?.calls||0;
   document.getElementById('f-due').value=l?.due ? (l.due.length>10?l.due:l.due+'T09:00') : '';
   document.getElementById('f-calldate').value=l?.callDate||'';
   document.getElementById('f-lang').value=(l?.lang==='nl'||l?.lang==='en')?l.lang:'';
@@ -1174,6 +1227,17 @@ function openLead(id){
     document.getElementById('f-setter').innerHTML=setterOptions(cur).map(o=>`<option value="${o.id}">${esc(o.label)}</option>`).join('');
     document.getElementById('f-setter').value=cur;
   } else { sw.style.display='none'; }
+  // gepersonaliseerd belscript (voornaam ingevuld) met kopieerknoppen
+  const sp=document.getElementById('f-scriptpanel');
+  const S=(state.scripts&&state.scripts[state.lang])||{};
+  const lead=l||{firstName:document.getElementById('f-firstname').value};
+  sp.innerHTML = SCRIPT_SECTIONS.map(sec=>{
+    const raw=S[sec.key]; if(!raw) return '';
+    const txt=personalize(raw, lead);
+    return `<div class="fupblock"><span class="tag">${sec.label}</span>
+      <div class="qscript-text" style="font-size:12.5px">${esc(txt)}</div>
+      <button class="btn ghost sm" style="margin-top:8px" onclick="copyText(${JSON.stringify(txt).replace(/"/g,'&quot;')},this)">📋 Kopieer</button></div>`;
+  }).join('') || `<div class="empty-script">Nog geen script — vul de Scripts-tab.</div>`;
   modalPhase=l?phaseOf(l):'tocall';
   modalFlags=Object.assign({}, l?.cflags||{});
   renderStepper(); renderFlags();
@@ -1204,7 +1268,7 @@ function saveLead(){
     website: document.getElementById('f-website').value.trim(),
     cphase: modalPhase,
     cflags: modalFlags,
-    fups: Math.max(0,parseInt(document.getElementById('f-fups').value)||0),
+    calls: Math.min(MAX_CALLS, Math.max(0,parseInt(document.getElementById('f-calls').value)||0)),
     due: document.getElementById('f-due').value,
     callDate: document.getElementById('f-calldate').value,
     notes: document.getElementById('f-notes').value.trim()
@@ -1213,7 +1277,7 @@ function saveLead(){
   if(editingId){
     const i=state.leads.findIndex(x=>x.id===editingId), prev=state.leads[i];
     lead._setter = (me&&me.role==='owner') ? document.getElementById('f-setter').value : (prev._setter||targetSetter());
-    ['dialedDate','pickupDate','pitchedDate','bookedDate'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
+    ['dialedDate','pickupDate','pitchedDate','bookedDate','company','title','industry','closedReason'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
     stampFlagDates(lead);
     state.leads[i]=lead;
   } else {
