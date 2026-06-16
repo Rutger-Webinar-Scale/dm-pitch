@@ -389,6 +389,7 @@
     <button class="tab active" data-view="dash">Vandaag <span class="count" id="cntWork">0</span></button>
     <button class="tab" data-view="pipe">Pipeline <span class="count" id="cntPipe">0</span></button>
     <button class="tab" data-view="all">Leads <span class="count" id="cntAll">0</span></button>
+    <button class="tab" data-view="call" id="tabCall" style="display:none">📞 Cold Call <span class="count" id="cntCall">0</span></button>
     <button class="tab" data-view="scripts">Scripts</button>
     <button class="tab" data-view="stats">Cijfers</button>
     <button class="tab" data-view="info">Info</button>
@@ -487,6 +488,38 @@
         <tbody id="leadBody"></tbody>
       </table>
     </div>
+  </section>
+
+  <!-- ================= COLD CALL ================= -->
+  <section class="view" id="view-call">
+    <div class="lang-bar">
+      <div>
+        <div class="sec-h" style="margin:0">📞 Cold Call</div>
+        <div class="sec-sub" style="margin:2px 0 0">Bel-outreach — los van de DM-funnel. KPI's: Pick Up Rate (≥20%), Pitch Rate (5–10%), Appointment Booking Rate (≥2%).</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="range-toggle" id="callRangeToggle">
+          <button class="range-btn" data-crange="7">7 dgn</button>
+          <button class="range-btn active" data-crange="30">30 dgn</button>
+          <button class="range-btn" data-crange="90">90 dgn</button>
+          <button class="range-btn" data-crange="all">Alles</button>
+        </div>
+        <button class="btn ghost sm" onclick="openCallImport()">⇪ Bel-leads</button>
+        <button class="btn sig sm" onclick="openCallLead()">+ Bel-lead</button>
+      </div>
+    </div>
+
+    <div class="metrics" id="callMetrics" style="margin-top:16px"></div>
+
+    <div id="callAccess" style="display:none"></div>
+
+    <div class="sec-h" style="margin-top:28px">Belijst — <span id="callWorkCount">0</span> te bellen</div>
+    <div class="sec-sub">Bovenaan beginnen. Klik het nummer om te bellen, vink daarna af wat er gebeurde.</div>
+    <div id="callWork"></div>
+
+    <div class="sec-h" style="margin-top:32px">Bel-pipeline</div>
+    <div class="sec-sub">Sleep leads tussen de fases. Elke stap stempelt automatisch de bijbehorende metric.</div>
+    <div class="board" id="callBoard" style="margin-top:14px"></div>
   </section>
 
   <!-- ================= SCRIPTS ================= -->
@@ -734,6 +767,65 @@ Lisa, instagram.com/lisa, booked"></textarea>
   </div>
 </div>
 
+<!-- ================= COLD CALL LEAD MODAL ================= -->
+<div class="scrim" id="callScrim">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="callModalTitle">Nieuwe bel-lead</h3>
+      <button class="x" onclick="closeCallLead()">×</button>
+    </div>
+    <div class="modal-b">
+      <div class="grid2">
+        <div><label class="f">Naam / bedrijf</label><input class="f" id="cf-name" placeholder="Naam"></div>
+        <div><label class="f">Telefoon</label><input class="f" id="cf-phone" placeholder="+31 6 ..."></div>
+      </div>
+      <div class="grid2">
+        <div><label class="f">Plaats</label><input class="f" id="cf-city" placeholder="Stad"></div>
+        <div><label class="f">Website</label><input class="f" id="cf-website" placeholder="https://..."></div>
+      </div>
+      <label class="f">Fase</label>
+      <div class="stepper" id="callPhaseStepper"></div>
+      <div class="grid2">
+        <div><label class="f">Volgende belmoment</label><input class="f" id="cf-due" type="datetime-local"></div>
+        <div><label class="f">Datum geboekte afspraak</label><input class="f" id="cf-calldate" type="date"></div>
+      </div>
+      <label class="f">Tracking (de KPI's)</label>
+      <div class="quickrow" id="callFlagRow"></div>
+      <label class="f">Notities</label>
+      <textarea class="f" id="cf-notes" style="min-height:60px" placeholder="Bezwaren, wat opviel, beste belmoment..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" id="callDelBtn" onclick="deleteCallLead()" style="border-color:var(--bad);color:var(--bad)">Verwijder</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="closeCallLead()">Annuleer</button>
+        <button class="btn sig" onclick="saveCallLead()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= COLD CALL IMPORT MODAL ================= -->
+<div class="scrim" id="callImpScrim">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-h">
+      <h3>Bel-leads importeren</h3>
+      <button class="x" onclick="closeCallImport()">×</button>
+    </div>
+    <div class="modal-b">
+      <label class="f">Eén lead per regel: <span style="text-transform:none;color:var(--ink)">naam, telefoon, plaats, website</span> (alleen naam+telefoon verplicht)</label>
+      <textarea class="f" id="callImpText" style="min-height:170px;font-family:'Space Mono',monospace;font-size:12px" placeholder="Cinz Training & Coaching, +31 6 10650362
+Cor the Coach, +31 6 18377278, Rotterdam"></textarea>
+    </div>
+    <div class="modal-foot">
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)" id="callImpCount">0 leads klaar</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="closeCallImport()">Annuleer</button>
+        <button class="btn sig" onclick="runCallImport()">Importeer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= AUTH OVERLAY ================= -->
 <div class="scrim show" id="authScrim" style="background:var(--paper);backdrop-filter:none;align-items:center">
   <div class="modal" style="max-width:420px">
@@ -848,7 +940,7 @@ function targetSetter(){
   if(!setters.length) return me.id;
   let best=setters[0], bestN=Infinity;
   setters.forEach(p=>{
-    const n = state.leads.filter(l=> l._setter===p.id && l.phase!=='dead' && !(l.flags&&l.flags.approached)).length;
+    const n = state.leads.filter(l=> !isCallLead(l) && l._setter===p.id && l.phase!=='dead' && !(l.flags&&l.flags.approached)).length;
     if(n<bestN){ bestN=n; best=p; }
   });
   return best.id;
@@ -1048,8 +1140,9 @@ function setLeadAccount(id, acct){
   saveState(); renderAll();
 }
 /* the account you're currently working as ('all' = aggregate); owner also filters by setter */
+function isCallLead(l){ return l && l.channel==='call'; }
 function visibleLeads(){
-  let ls = state.leads;
+  let ls = state.leads.filter(l=> !isCallLead(l));   // DM-views zien NOOIT bel-leads
   if(me && me.role==='owner' && setterFilter!=='all') ls = ls.filter(l=> (l._setter||me.id)===setterFilter);
   const a = state.activeAccount;
   if(!a || a==='all') return ls;
@@ -2663,7 +2756,7 @@ function applyRoleCopy(){
     if(ws) ws.textContent = 'Van boven naar beneden wegwerken. Script staat klaar — kopieer, verstuur, vink af.';
   }
 }
-function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); renderCalendar(); }
+function renderAll(){ applyRoleCopy(); renderAccountSwitcher(); renderMetrics(); renderDaily(); renderOwnerSnippet(); renderInsight(); renderFunnel(); renderTeam(); renderWorklist(); renderBoard(); renderTable(); renderAB(); renderFT(); renderPlaybook(); renderInfo(); renderCalendar(); renderCall(); }
 
 /* ---------- AGENDA / MAANDKALENDER (Vandaag-tab) ---------- */
 let calYM = null, calSel = null;
@@ -2869,6 +2962,289 @@ function renderInfo(){
   });
 }
 
+/* ===================================================================
+   COLD CALL MODULE — volledig zelfstandig, deelt alleen de leads-tabel
+   (channel:'call'). DM-views raken dit nooit (zie visibleLeads()).
+   =================================================================== */
+const CALL_PHASES = {
+  tocall:  {label:'Te bellen',  color:'var(--intent)',  desc:'Nog niet (succesvol) gesproken'},
+  pickup:  {label:'Opgenomen',  color:'var(--engaged)', desc:'Opgenomen — gesprek gaande'},
+  pitched: {label:'Gepitcht',   color:'var(--signal)',  desc:'Pitch gegeven'},
+  booked:  {label:'Afspraak',   color:'var(--booked)',  desc:'Afspraak ingepland'},
+  dead:    {label:'Afgesloten', color:'var(--muted)',   desc:'Niet bereikt / geen interesse'}
+};
+const CALL_FLAGS = [
+  {key:'dialed',  label:'Gebeld'},
+  {key:'pickup',  label:'Opgenomen'},
+  {key:'pitched', label:'Gepitcht'},
+  {key:'booked',  label:'Afspraak'}
+];
+const CALL_FLAG_DATE = {dialed:'dialedDate', pickup:'pickupDate', pitched:'pitchedDate', booked:'bookedCallDate'};
+// alle KPI's gemeten t.o.v. het aantal gebelde leads (dials)
+const CALL_KPIS = [
+  {key:'PUR', name:'Pick Up Rate (PUR)',  num:'pickup',  den:'dialed', kpi:20},
+  {key:'PR',  name:'Pitch Rate (PR)',     num:'pitched', den:'dialed', kpi:5},
+  {key:'ABR', name:'Appt. Booking (ABR)', num:'booked',  den:'dialed', kpi:2}
+];
+// cumulatieve flags per fase (vooruit slepen stempelt automatisch)
+const CALL_PHASE_FLAGS = {
+  tocall:[], pickup:['dialed','pickup'], pitched:['dialed','pickup','pitched'],
+  booked:['dialed','pickup','pitched','booked'], dead:[]
+};
+
+let activeCallRange = '30';
+function canCall(){ return !!me && (me.role==='owner' || me.can_cold_call); }
+function callLeads(){
+  let ls = state.leads.filter(isCallLead);
+  if(me && me.role==='owner' && setterFilter!=='all') ls = ls.filter(l=> (l._setter||me.id)===setterFilter);
+  return ls;
+}
+function targetSetterCall(){
+  if(!me) return null;
+  if(me.role!=='owner') return me.id;
+  if(setterFilter!=='all') return setterFilter;
+  return me.id; // owner belt standaard uit eigen stapel
+}
+function callPhaseOf(l){ return CALL_PHASES[l.cphase] ? l.cphase : 'tocall'; }
+function callWindowBounds(){
+  if(activeCallRange==='all') return {from:null,to:null};
+  const d=new Date(); d.setDate(d.getDate()-(parseInt(activeCallRange)-1));
+  return {from:d.toISOString().slice(0,10), to:todayISO()};
+}
+function inCallWindow(dateISO){
+  if(!dateISO) return false;
+  const {from,to}=callWindowBounds();
+  if(from && dateISO<from) return false;
+  if(to && dateISO>to) return false;
+  return true;
+}
+function callEventDate(l, flag){ return l[CALL_FLAG_DATE[flag]] || l.dialedDate || null; }
+function stampCallDates(l){
+  l.cflags = l.cflags || {};
+  CALL_FLAGS.forEach(f=>{ if(l.cflags[f.key] && !l[CALL_FLAG_DATE[f.key]]) l[CALL_FLAG_DATE[f.key]] = todayISO(); });
+}
+function callCount(flag){ return callLeads().filter(l=> l.cflags && l.cflags[flag] && inCallWindow(callEventDate(l,flag))).length; }
+function callRatio(num,den){ const d=callCount(den); return d? callCount(num)/d : 0; }
+
+function setCallRange(r){
+  activeCallRange=r;
+  document.querySelectorAll('#callRangeToggle .range-btn').forEach(b=>b.classList.toggle('active', b.dataset.crange===r));
+  renderCall();
+}
+
+function renderCall(){
+  if(!document.getElementById('view-call')) return;
+  renderCallMetrics(); renderCallAccess(); renderCallWork(); renderCallBoard();
+  const active = callLeads().filter(l=> callPhaseOf(l)!=='dead' && callPhaseOf(l)!=='booked').length;
+  const c=document.getElementById('cntCall'); if(c) c.textContent = active;
+}
+function renderCallMetrics(){
+  const wrap=document.getElementById('callMetrics'); if(!wrap) return;
+  const lbl={'7':'7d','30':'30d','90':'90d'}[activeCallRange]||'alles';
+  const dials=callCount('dialed');
+  let html=`<div class="mcard">
+    <div class="label">Gebeld · ${lbl}</div>
+    <div class="val">${dials}</div>
+    <div class="kpi">dials in venster</div>
+    <div class="denom">${callLeads().filter(l=>callPhaseOf(l)==='tocall').length} nog te bellen</div>
+  </div>`;
+  CALL_KPIS.forEach(k=>{
+    const r=callRatio(k.num,k.den), pct=r*100, has=callCount(k.den)>0, meets=pct>=k.kpi;
+    const cls=!has?'neutral':(meets?'ok':'under'), txt=!has?'geen data':(meets?'op doel':'eronder');
+    html+=`<div class="mcard ${has&&!meets?'alert':''}">
+      <div class="label">${k.name}</div>
+      <div class="val">${has?fmtPct(r):'—'}</div>
+      <div class="kpi">KPI ${k.kpi}%${k.key==='PR'?'–10%':''} <span class="tag ${cls}">${txt}</span></div>
+      <div class="denom">${callCount(k.num)} / ${dials} gebeld</div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+function callTelLink(phone){ return 'tel:'+(phone||'').replace(/[^\d+]/g,''); }
+function callQuickFlags(l){
+  return CALL_FLAGS.map(f=>{
+    const on=!!(l.cflags&&l.cflags[f.key]);
+    return `<button class="btn ${on?'sig':'ghost'} sm" onclick="event.stopPropagation();toggleCallFlag('${l.id}','${f.key}')">${on?'✓ ':''}${f.label}</button>`;
+  }).join('');
+}
+function renderCallWork(){
+  const wrap=document.getElementById('callWork'); if(!wrap) return;
+  const todo = callLeads().filter(l=>['tocall','pickup','pitched'].includes(callPhaseOf(l)))
+    .sort((a,b)=>({tocall:0,pickup:1,pitched:2}[callPhaseOf(a)]-{tocall:0,pickup:1,pitched:2}[callPhaseOf(b)]));
+  document.getElementById('callWorkCount').textContent = callLeads().filter(l=>callPhaseOf(l)==='tocall').length;
+  if(!todo.length){ wrap.innerHTML=`<div class="empty" style="padding:24px">Niets te bellen. Importeer bel-leads of voeg er één toe.</div>`; return; }
+  wrap.innerHTML = todo.slice(0,200).map(l=>{
+    const ph=CALL_PHASES[callPhaseOf(l)];
+    const setter = (me&&me.role==='owner') ? `<span class="plat" title="Setter">🧑‍💼 ${esc(setterName(l._setter))}</span>` : '';
+    return `<div class="lead" onclick="openCallLead('${l.id}')" style="cursor:pointer">
+      <div class="ln">${esc(l.name||'(naamloos)')} <span class="plat" style="background:${ph.color};color:#fff">${ph.label}</span></div>
+      <div class="lm">
+        <a class="link" href="${callTelLink(l.phone)}" onclick="event.stopPropagation()" style="font-family:'Space Mono',monospace">📞 ${esc(l.phone||'—')}</a>
+        ${l.city?`<span style="color:var(--muted)">${esc(l.city)}</span>`:''}
+        ${l.website?`<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">site ↗</a>`:''}
+        ${setter}
+      </div>
+      <div class="quickrow" style="margin-top:8px">${callQuickFlags(l)}</div>
+    </div>`;
+  }).join('');
+}
+function renderCallBoard(){
+  const board=document.getElementById('callBoard'); if(!board) return;
+  const cols=Object.keys(CALL_PHASES).filter(p=>p!=='dead');
+  board.classList.add('cols4'); board.classList.remove('cols5');
+  const vis=callLeads();
+  board.innerHTML = cols.map(ph=>{
+    const ls=vis.filter(l=>callPhaseOf(l)===ph);
+    const cards = ls.length ? ls.map(l=>`<div class="lead" draggable="true" ondragstart="dragLead(event,'${l.id}')" ondragend="dragEnd(event)" onclick="openCallLead('${l.id}')">
+        <div class="ln">${esc(l.name||'(naamloos)')}</div>
+        <div class="lm"><span style="font-family:'Space Mono',monospace;color:var(--signal)">${esc(l.phone||'')}</span>
+          ${l.cphase==='booked'&&l.callDate?`<span class="due later">📅 ${esc(l.callDate)}</span>`:''}</div>
+      </div>`).join('') : `<div class="empty">Leeg.</div>`;
+    return `<div class="col" data-cphase="${ph}" ondragover="allowDrop(event)" ondragenter="event.preventDefault();this.classList.add('dragover')" ondragleave="if(event.target===this)this.classList.remove('dragover')" ondrop="dropCallLead(event,'${ph}')">
+      <div class="col-h"><div class="name"><span class="phase-dot" style="background:${CALL_PHASES[ph].color}"></span>${CALL_PHASES[ph].label}</div><div class="num">${ls.length}</div></div>
+      <div class="col-desc">${CALL_PHASES[ph].desc}</div>${cards}</div>`;
+  }).join('');
+}
+function dropCallLead(e, phase){
+  e.preventDefault();
+  document.querySelectorAll('.col.dragover').forEach(c=>c.classList.remove('dragover'));
+  const id = dragId || (e.dataTransfer && e.dataTransfer.getData('text/plain')); dragId=null;
+  if(id) moveCallPhase(id, phase);
+}
+function moveCallPhase(id, phase){
+  const l=state.leads.find(x=>x.id===id); if(!l || !isCallLead(l) || callPhaseOf(l)===phase) return;
+  l.cphase=phase;
+  l.cflags=l.cflags||{};
+  (CALL_PHASE_FLAGS[phase]||[]).forEach(f=>l.cflags[f]=true);
+  if(phase==='booked' && !l.callDate){ const d=prompt('Datum van de afspraak (JJJJ-MM-DD):', todayISO()); if(d) l.callDate=d; }
+  stampCallDates(l);
+  saveState(); renderCall();
+}
+function toggleCallFlag(id, flag){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{};
+  l.cflags[flag]=!l.cflags[flag];
+  // logische promotie van de fase op basis van de hoogste aangevinkte flag
+  if(l.cflags.booked) l.cphase='booked';
+  else if(l.cflags.pitched) l.cphase='pitched';
+  else if(l.cflags.pickup) l.cphase='pickup';
+  else l.cphase='tocall';
+  stampCallDates(l);
+  saveState(); renderCall();
+}
+
+/* ----- owner: per setter cold-call toegang aan/uit ----- */
+function renderCallAccess(){
+  const box=document.getElementById('callAccess'); if(!box) return;
+  if(!me || me.role!=='owner'){ box.style.display='none'; return; }
+  const setters=team.filter(t=>t.role==='setter');
+  box.style.display='block';
+  box.innerHTML = `<div class="sec-h" style="margin-top:26px">Cold-call toegang</div>
+    <div class="sec-sub">Vink aan wie mag cold-callen. Setters zonder vinkje zien de Cold Call-tab niet en houden hun DM-flow ongewijzigd.</div>
+    <div class="quickrow" style="margin-top:10px">${
+      setters.length ? setters.map(s=>`<button class="btn ${s.can_cold_call?'sig':'ghost'} sm" onclick="setCanCall('${s.id}',${s.can_cold_call?'false':'true'})">${s.can_cold_call?'✓ ':''}${esc(s.name||s.email)}</button>`).join('')
+      : `<span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Nog geen setters in het team.</span>`
+    }</div>`;
+}
+async function setCanCall(id, val){
+  const v = (val===true||val==='true');
+  const {error}=await sb.from('profiles').update({can_cold_call:v}).eq('id',id);
+  if(error){ alert('Kon toegang niet wijzigen: '+error.message); return; }
+  const p=team.find(t=>t.id===id); if(p) p.can_cold_call=v;
+  renderCallAccess();
+}
+
+/* ----- cold-call lead modal ----- */
+let editingCallId=null, callModalPhase='tocall', callModalFlags={};
+function openCallLead(id){
+  editingCallId=id||null;
+  const l=id?state.leads.find(x=>x.id===id):null;
+  document.getElementById('callModalTitle').textContent = l?'Bel-lead bewerken':'Nieuwe bel-lead';
+  document.getElementById('callDelBtn').style.display = l?'inline-block':'none';
+  document.getElementById('cf-name').value = l?.name||'';
+  document.getElementById('cf-phone').value = l?.phone||'';
+  document.getElementById('cf-city').value = l?.city||'';
+  document.getElementById('cf-website').value = l?.website||'';
+  document.getElementById('cf-due').value = l?.due ? (l.due.length>10?l.due:l.due+'T09:00') : '';
+  document.getElementById('cf-calldate').value = l?.callDate||'';
+  document.getElementById('cf-notes').value = l?.notes||'';
+  callModalPhase = l?callPhaseOf(l):'tocall';
+  callModalFlags = Object.assign({}, l?.cflags||{});
+  renderCallStepper(); renderCallModalFlags();
+  document.getElementById('callScrim').classList.add('show');
+}
+function closeCallLead(){ document.getElementById('callScrim').classList.remove('show'); editingCallId=null; }
+function renderCallStepper(){
+  document.getElementById('callPhaseStepper').innerHTML = Object.keys(CALL_PHASES).map(k=>
+    `<div class="step ${callModalPhase===k?'on':''}" data-ph="${k}" onclick="setCallModalPhase('${k}')">${CALL_PHASES[k].label}</div>`).join('');
+}
+function setCallModalPhase(ph){
+  callModalPhase=ph;
+  (CALL_PHASE_FLAGS[ph]||[]).forEach(f=>callModalFlags[f]=true);
+  renderCallStepper(); renderCallModalFlags();
+}
+function renderCallModalFlags(){
+  document.getElementById('callFlagRow').innerHTML = CALL_FLAGS.map(f=>{
+    const on=!!callModalFlags[f.key];
+    return `<button class="btn ${on?'sig':'ghost'} sm" onclick="toggleCallModalFlag('${f.key}')">${on?'✓ ':''}${f.label}</button>`;
+  }).join('');
+}
+function toggleCallModalFlag(k){ callModalFlags[k]=!callModalFlags[k]; renderCallModalFlags(); }
+function saveCallLead(){
+  const lead = {
+    id: editingCallId || ('C'+Date.now()+Math.random().toString(36).slice(2,6)),
+    channel:'call',
+    name: document.getElementById('cf-name').value.trim(),
+    phone: document.getElementById('cf-phone').value.trim(),
+    city: document.getElementById('cf-city').value.trim(),
+    website: document.getElementById('cf-website').value.trim(),
+    cphase: callModalPhase,
+    cflags: callModalFlags,
+    due: document.getElementById('cf-due').value,
+    callDate: document.getElementById('cf-calldate').value,
+    notes: document.getElementById('cf-notes').value.trim()
+  };
+  if(editingCallId){
+    const i=state.leads.findIndex(x=>x.id===editingCallId);
+    lead._setter = state.leads[i]._setter || targetSetterCall();
+    ['dialedDate','pickupDate','pitchedDate','bookedCallDate'].forEach(k=>{ if(state.leads[i][k]) lead[k]=state.leads[i][k]; });
+    stampCallDates(lead);
+    state.leads[i]=lead;
+  } else {
+    lead._setter = targetSetterCall();
+    stampCallDates(lead);
+    state.leads.push(lead);
+  }
+  saveState(); closeCallLead(); renderCall();
+}
+function deleteCallLead(){
+  if(!editingCallId) return;
+  state.leads=state.leads.filter(x=>x.id!==editingCallId);
+  saveState(); closeCallLead(); renderCall();
+}
+
+/* ----- cold-call import (naam, telefoon, plaats, website) ----- */
+function openCallImport(){ document.getElementById('callImpText').value=''; updateCallImpCount(); document.getElementById('callImpScrim').classList.add('show'); }
+function closeCallImport(){ document.getElementById('callImpScrim').classList.remove('show'); }
+function parseCallImp(){
+  return document.getElementById('callImpText').value.split('\n').map(line=>{
+    const p=line.split(/[,\t]/).map(s=>s.trim());
+    if(!p[0] || !p[1]) return null;
+    return {name:p[0], phone:p[1], city:p[2]||'', website:p[3]||''};
+  }).filter(Boolean);
+}
+function updateCallImpCount(){ document.getElementById('callImpCount').textContent = parseCallImp().length+' leads klaar'; }
+function runCallImport(){
+  const rows=parseCallImp(); if(!rows.length){ closeCallImport(); return; }
+  const setter=targetSetterCall();
+  rows.forEach((r,i)=>{
+    const lead={ id:'C'+Date.now()+i+Math.random().toString(36).slice(2,5), channel:'call',
+      name:r.name, phone:r.phone, city:r.city, website:r.website, cphase:'tocall', cflags:{}, due:'', notes:'', _setter:setter };
+    state.leads.push(lead);
+  });
+  saveState(); closeCallImport(); renderCall(); switchView('call');
+}
+
 /* ---------- tabs ---------- */
 function switchView(v){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
@@ -2904,6 +3280,7 @@ async function startApp(){
     document.getElementById('setterPill').style.display = 'flex';
     renderSetterSwitcher();
   } else { team = [me]; }
+  if(canCall()){ const tc=document.getElementById('tabCall'); if(tc) tc.style.display='inline-block'; }
   await loadCloud();
   document.getElementById('authScrim').classList.remove('show');
   initUI();
@@ -2916,6 +3293,10 @@ function initUI(){
   document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===state.lang));
   wireImport();
   document.querySelectorAll('#rangeToggle .range-btn').forEach(b=>b.addEventListener('click',()=>setRange(b.dataset.range)));
+  document.querySelectorAll('#callRangeToggle .range-btn').forEach(b=>b.addEventListener('click',()=>setCallRange(b.dataset.crange)));
+  const cit=document.getElementById('callImpText'); if(cit) cit.addEventListener('input', updateCallImpCount);
+  document.getElementById('callScrim').addEventListener('click',e=>{ if(e.target.id==='callScrim') closeCallLead(); });
+  document.getElementById('callImpScrim').addEventListener('click',e=>{ if(e.target.id==='callImpScrim') closeCallImport(); });
   document.querySelectorAll('#abVarToggle .range-btn').forEach(b=>{
     b.classList.toggle('active', parseInt(b.dataset.abn)===activeVariants().length);
     b.addEventListener('click',()=>setAbVariants(parseInt(b.dataset.abn)));
