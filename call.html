@@ -522,13 +522,16 @@
     </div>
     <div class="modal-b">
       <div class="grid2">
-        <div><label class="f">Naam / bedrijf</label><input class="f" id="f-name" placeholder="Naam"></div>
-        <div><label class="f">Telefoon</label><input class="f" id="f-phone" placeholder="+31 6 ..."></div>
+        <div><label class="f">Voornaam</label><input class="f" id="f-firstname" placeholder="Voornaam"></div>
+        <div><label class="f">Achternaam</label><input class="f" id="f-lastname" placeholder="Achternaam"></div>
       </div>
       <div class="grid2">
+        <div><label class="f">Telefoon</label><input class="f" id="f-phone" placeholder="+31 6 ..."></div>
         <div><label class="f">Plaats</label><input class="f" id="f-city" placeholder="Stad"></div>
-        <div><label class="f">Website</label><input class="f" id="f-website" placeholder="https://..."></div>
       </div>
+      <label class="f">Website</label>
+      <input class="f" id="f-website" placeholder="https://...">
+      <div id="f-website-link" style="margin-top:7px"></div>
       <label class="f">Fase</label>
       <div class="stepper" id="phaseStepper"></div>
       <div class="grid2">
@@ -705,6 +708,17 @@ function fmtPct(n){ return (n*100).toFixed(0)+'%'; }
 function fmtDue(due){ const hm = due.length>10 ? due.slice(11,16) : '';
   return (due.slice(0,10)===todayISO() && hm) ? hm : due.slice(5,10); }
 function telLink(phone){ return 'tel:'+(phone||'').replace(/[^\d+]/g,''); }
+function copyText(txt, btn){
+  const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent='✓'; setTimeout(()=>btn.textContent=o,1000); } };
+  try{ navigator.clipboard.writeText(txt).then(done, done); }catch(_){ done(); }
+}
+// telefoon als bel-link + kopieerknop (gebruikt in werklijst én tabel)
+function phoneHTML(l, big){
+  if(!l.phone) return '<span style="color:var(--muted)">—</span>';
+  const a=`<a class="link" href="${telLink(l.phone)}" onclick="event.stopPropagation()" style="font-weight:700${big?';font-size:13px':''}">📞 ${esc(l.phone)}</a>`;
+  const b=`<button class="btn ghost sm" title="Kopieer nummer" onclick="event.stopPropagation();copyText('${esc(l.phone)}',this)" style="padding:3px 8px;font-size:11px;margin-left:6px">📋</button>`;
+  return a+b;
+}
 function canCall(){ return !!me && (me.role==='owner' || me.can_cold_call); }
 function setterName(id){ const p=team.find(t=>t.id===id); return p?(p.name||p.email):'?'; }
 function phaseOf(l){ return CALL_PHASES[l.cphase] ? l.cphase : 'tocall'; }
@@ -951,7 +965,7 @@ function renderWorklist(){
     return `<div class="lead" onclick="openLead('${l.id}')" style="cursor:pointer">
       <div class="ln">${esc(l.name||'(naamloos)')} <span class="plat" style="background:${ph.color};color:#fff;border-color:${ph.color}">${ph.label}</span></div>
       <div class="lm">
-        <a class="link" href="${telLink(l.phone)}" onclick="event.stopPropagation()" style="font-size:13px;font-weight:700">📞 ${esc(l.phone||'—')}</a>
+        ${phoneHTML(l, true)}
         ${l.city?`<span>${esc(l.city)}</span>`:''}
         ${l.website?`<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">site ↗</a>`:''}
         ${l.fups?`<span class="fupbadge">${l.fups}× gebeld</span>`:''}
@@ -1036,8 +1050,8 @@ function renderTable(){
     const next = phaseOf(l)==='booked' ? (l.callDate?('📅 '+esc(l.callDate)):'afspraak') : (l.due?fmtDue(l.due):(phaseOf(l)==='dead'?'—':'te bellen'));
     return `<tr class="row" onclick="openLead('${l.id}')" style="cursor:pointer">
       <td><span class="statusdot"><span class="sd" style="background:${ph.color}"></span>${ph.label}</span></td>
-      <td><b>${esc(l.name||'(naamloos)')}</b></td>
-      <td><a class="link" href="${telLink(l.phone)}" onclick="event.stopPropagation()">${esc(l.phone||'—')}</a></td>
+      <td><b>${esc(l.name||'(naamloos)')}</b>${l.website?` <a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(l.website)}">↗</a>`:''}</td>
+      <td>${phoneHTML(l)}</td>
       <td>${esc(l.city||'')}</td>
       ${setterCell}
       <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">${next}</td>
@@ -1138,10 +1152,15 @@ function openLead(id){
   const l=id?state.leads.find(x=>x.id===id):null;
   document.getElementById('modalTitle').textContent=l?'Bel-lead bewerken':'Nieuwe bel-lead';
   document.getElementById('delBtn').style.display=l?'inline-block':'none';
-  document.getElementById('f-name').value=l?.name||'';
+  // naam → voornaam + achternaam (split bestaande 'name' als er nog geen first/last is)
+  let first=l?.firstName||'', last=l?.lastName||'';
+  if(!first && !last && l?.name){ const p=l.name.trim().split(/\s+/); first=p.shift()||''; last=p.join(' '); }
+  document.getElementById('f-firstname').value=first;
+  document.getElementById('f-lastname').value=last;
   document.getElementById('f-phone').value=l?.phone||'';
   document.getElementById('f-city').value=l?.city||'';
   document.getElementById('f-website').value=l?.website||'';
+  document.getElementById('f-website-link').innerHTML = l?.website ? `<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener">↗ open website</a>` : '';
   document.getElementById('f-fups').value=l?.fups||0;
   document.getElementById('f-due').value=l?.due ? (l.due.length>10?l.due:l.due+'T09:00') : '';
   document.getElementById('f-calldate').value=l?.callDate||'';
@@ -1174,9 +1193,12 @@ function renderFlags(){
 }
 function toggleModalFlag(k){ modalFlags[k]=!modalFlags[k]; renderFlags(); }
 function saveLead(){
+  const first=document.getElementById('f-firstname').value.trim();
+  const last=document.getElementById('f-lastname').value.trim();
   const lead={
     id: editingId || ('C'+Date.now()+Math.random().toString(36).slice(2,6)),
-    name: document.getElementById('f-name').value.trim(),
+    firstName:first, lastName:last,
+    name: (first+' '+last).trim(),
     phone: document.getElementById('f-phone').value.trim(),
     city: document.getElementById('f-city').value.trim(),
     website: document.getElementById('f-website').value.trim(),
