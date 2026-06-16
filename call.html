@@ -529,8 +529,10 @@
         <div><label class="f">Telefoon</label><input class="f" id="f-phone" placeholder="+31 6 ..."></div>
         <div><label class="f">Plaats</label><input class="f" id="f-city" placeholder="Stad"></div>
       </div>
-      <label class="f">Website</label>
-      <input class="f" id="f-website" placeholder="https://...">
+      <div class="grid2">
+        <div><label class="f">Bedrijf</label><input class="f" id="f-company" placeholder="Bedrijfsnaam"></div>
+        <div><label class="f">Website</label><input class="f" id="f-website" placeholder="https://..."></div>
+      </div>
       <div id="f-website-link" style="margin-top:7px"></div>
       <label class="f">Fase</label>
       <div class="stepper" id="phaseStepper"></div>
@@ -962,10 +964,11 @@ function callActions(l){
       <button class="btn ghost sm" title="Verwijder" onclick="event.stopPropagation();deleteRow('${l.id}')" style="border-color:var(--bad);color:var(--bad)">🗑</button>`;
   }
   return `
+    <button class="btn ghost sm" onclick="event.stopPropagation();logCall('${l.id}')" title="Belpoging gelogd (+1)">📞 Gebeld</button>
     <button class="btn ghost sm" onclick="event.stopPropagation();noAnswer('${l.id}')" title="Niet opgenomen → follow-up">📵 Niet opgenomen</button>
     <button class="btn ghost sm" onclick="event.stopPropagation();markPickup('${l.id}')" title="Opgenomen">☎️ Opgenomen</button>
-    <button class="btn ghost sm" onclick="event.stopPropagation();markPitched('${l.id}')" title="Pitch gegeven">🎤 Gepitcht</button>
-    <button class="btn sig sm" onclick="event.stopPropagation();bookMeeting('${l.id}')" title="Afspraak geboekt">📅 Afspraak</button>
+    <button class="btn ghost sm" onclick="event.stopPropagation();markPitched('${l.id}')" title="Pitch gegeven">🎤 Gepitched</button>
+    <button class="btn sig sm" onclick="event.stopPropagation();bookMeeting('${l.id}')" title="Afspraak geboekt">📅 Afspraak geboekt</button>
     <button class="btn ghost sm" onclick="event.stopPropagation();stopCalling('${l.id}')" title="Niet meer bellen" style="border-color:var(--bad);color:var(--bad)">⛔ Niet meer bellen</button>
     <button class="btn ghost sm" onclick="event.stopPropagation();deleteRow('${l.id}')" title="Verwijder (niet relevant)" style="border-color:var(--bad);color:var(--bad)">🗑</button>`;
 }
@@ -1046,6 +1049,15 @@ function movePhase(id,phase){
   saveState(); renderAll();
 }
 /* ---------- bel-acties (events, geen fases) ---------- */
+// Gebeld → belpoging gelogd (+1), naar follow-up, plan volgende belmoment; auto-afsluiten na 8×
+function logCall(id){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.cflags=l.cflags||{}; l.cflags.dialed=true;
+  l.calls=callsOf(l)+1;
+  if(l.calls>=MAX_CALLS){ l.cphase='dead'; l.due=''; l.closedReason='max pogingen ('+MAX_CALLS+'×)'; }
+  else { l.cphase='followup'; l.due=nextCallSlot(24); }
+  stampFlagDates(l); saveState(); renderAll();
+}
 // Niet opgenomen → poging telt, naar follow-up, plan terugbellen; auto-afsluiten na 8×
 function noAnswer(id){
   const l=state.leads.find(x=>x.id===id); if(!l) return;
@@ -1102,7 +1114,7 @@ function renderTable(){
     const next = phaseOf(l)==='booked' ? (l.callDate?('📅 '+esc(l.callDate)):'afspraak') : (l.due?fmtDue(l.due):(phaseOf(l)==='dead'?'—':'te bellen'));
     return `<tr class="row" onclick="openLead('${l.id}')" style="cursor:pointer">
       <td><span class="statusdot"><span class="sd" style="background:${ph.color}"></span>${ph.label}</span></td>
-      <td><b>${esc(l.name||'(naamloos)')}</b>${l.website?` <a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(l.website)}">↗</a>`:''}</td>
+      <td><b>${esc(l.name||'(naamloos)')}</b>${l.website?` <a class="link" href="${esc(l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(l.website)}">↗</a>`:''}${l.company?`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${esc(l.company)}</div>`:''}</td>
       <td>${phoneHTML(l)}</td>
       <td>${esc(l.city||'')}</td>
       ${setterCell}
@@ -1212,6 +1224,7 @@ function openLead(id){
   document.getElementById('f-lastname').value=last;
   document.getElementById('f-phone').value=l?.phone||'';
   document.getElementById('f-city').value=l?.city||'';
+  document.getElementById('f-company').value=l?.company||'';
   document.getElementById('f-website').value=l?.website||'';
   document.getElementById('f-website-link').innerHTML = l?.website ? `<a class="link" href="${esc(l.website)}" target="_blank" rel="noopener">↗ open website</a>` : '';
   document.getElementById('f-calls').value=l?.calls||0;
@@ -1265,6 +1278,7 @@ function saveLead(){
     name: (first+' '+last).trim(),
     phone: document.getElementById('f-phone').value.trim(),
     city: document.getElementById('f-city').value.trim(),
+    company: document.getElementById('f-company').value.trim(),
     website: document.getElementById('f-website').value.trim(),
     cphase: modalPhase,
     cflags: modalFlags,
@@ -1277,7 +1291,7 @@ function saveLead(){
   if(editingId){
     const i=state.leads.findIndex(x=>x.id===editingId), prev=state.leads[i];
     lead._setter = (me&&me.role==='owner') ? document.getElementById('f-setter').value : (prev._setter||targetSetter());
-    ['dialedDate','pickupDate','pitchedDate','bookedDate','company','title','industry','closedReason'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
+    ['dialedDate','pickupDate','pitchedDate','bookedDate','title','industry','closedReason'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
     stampFlagDates(lead);
     state.leads[i]=lead;
   } else {
