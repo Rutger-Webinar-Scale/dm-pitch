@@ -905,7 +905,16 @@ async function loadCloud(){
   state.goal       = sh.goal || 30;
   state.toolLinks  = sh.toolLinks || {};
   state.resources  = sh.resources || {};
-  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks), resources:JSON.stringify(state.resources) };
+  state.migrations = sh.migrations || {};
+  sharedSnap = { scripts:JSON.stringify(state.scripts), abVariants:JSON.stringify(state.abVariants), goal:JSON.stringify(state.goal), toolLinks:JSON.stringify(state.toolLinks), resources:JSON.stringify(state.resources), migrations:JSON.stringify(state.migrations) };
+  // migratie (eenmalig, team-breed): alle reeds verstuurde leads horen historisch
+  // bij de 🎥 VSL-funnel — niet de 💬 chat-funnel. Draait één keer; nieuwe leads
+  // krijgen daarna gewoon weer hun round-robin-funnel toegewezen.
+  if(!state.migrations.histVslJun2026){
+    state.leads.forEach(l=>{ if(l.flags && l.flags.approached){ l.funnel='video'; l.funnelAssigned=true; } });
+    state.migrations.histVslJun2026 = true;
+    saveState();
+  }
   const ud = (userRes.data && userRes.data.data) || {};
   state.lang          = ud.lang || 'nl';
   state.accounts      = (ud.accounts && ud.accounts.length) ? ud.accounts : [ (me.email||'account').split('@')[0].replace(/\./g,'') ];
@@ -935,7 +944,7 @@ async function syncNow(){
     if(dels.length){ const {error} = await sb.from('leads').delete().in('id', dels); if(error) throw error; }
     lastSync = cur;
     // shared team state
-    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}, resources:state.resources||{}};
+    const sh = {scripts:state.scripts, abVariants:state.abVariants, goal:state.goal, toolLinks:state.toolLinks||{}, resources:state.resources||{}, migrations:state.migrations||{}};
     for(const k in sh){
       const j = JSON.stringify(sh[k]);
       if(sharedSnap[k] !== j){
@@ -1041,8 +1050,14 @@ function stampFlagDates(l){
   });
 }
 
+/* cohort-anker: een conversieratio (÷ benaderd) telt de hele funnel over dezelfde
+   groep — de leads die in het venster zijn BENADERD. Anders kan een lead die vóór
+   het venster benaderd is maar er ín gezien/geboekt werd de teller boven de noemer
+   tillen → ratio's >100% (de oude MSR-bug). Daarom verankeren we elke flag op de
+   approachDate, niet op de event-datum van die specifieke flag. */
+function inCohort(l){ return inWindow(l.approachDate || null); }
 function count(flag){
-  return visibleLeads().filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  return visibleLeads().filter(l=> l.flags && l.flags[flag] && inCohort(l)).length;
 }
 function ratio(num,den){ const d=count(den); return d? count(num)/d : 0; }
 
@@ -1117,7 +1132,8 @@ function assignVariant(){
 }
 function countV(flag, v){
   // A/B-test loopt binnen de VSL-funnel — chat-leads tellen niet mee
-  return visibleLeads().filter(l=> leadFunnel(l)==='video' && l.variant===v && l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  // cohort-anker op approachDate (zie inCohort) zodat de ratio's nooit >100% gaan
+  return visibleLeads().filter(l=> leadFunnel(l)==='video' && l.variant===v && l.flags && l.flags[flag] && inCohort(l)).length;
 }
 function ratioV(num,den,v){ const d=countV(den,v); return d? countV(num,v)/d : 0; }
 /* standard normal CDF (Abramowitz–Stegun erf approx) for a rough confidence read */
@@ -1198,7 +1214,7 @@ function renderTeam(){
   const t = todayISO();
   const nts = nowISO();
   const setters = team.filter(x=>x.role==='setter');
-  const cnt=(ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  const cnt=(ls,flag)=> ls.filter(l=> l.flags && l.flags[flag] && inCohort(l)).length;
   const pct=(n,d)=> d ? (n/d*100).toFixed(0)+'%' : '—';
   const staleDays=l=> l.lastMsgDate ? Math.round((new Date(t)-new Date(l.lastMsgDate))/86400000) : 0;
   if(!setters.length){ document.getElementById('teamStats').innerHTML='<div class="empty">Nog geen setters — stuur ze de app-link om een account te maken.</div>'; return; }
@@ -2603,7 +2619,7 @@ function renderAB(){
 /* ---------- FUNNEL TEST (💬 chat vs 🎥 video) ---------- */
 const FT_MINSAMPLE = 20;
 function countF(flag, fn){
-  return visibleLeads().filter(l=> leadFunnel(l)===fn && l.flags && l.flags[flag] && inWindow(leadEventDate(l,flag))).length;
+  return visibleLeads().filter(l=> leadFunnel(l)===fn && l.flags && l.flags[flag] && inCohort(l)).length;
 }
 function renderFT(){
   const box = document.getElementById('ftBody'); if(!box) return;
