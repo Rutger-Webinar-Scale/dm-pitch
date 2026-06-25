@@ -913,9 +913,15 @@ async function loadCloud(){
     // NIET elke load — anders kun je een lead nooit meer op 'Afgesloten' zetten (springt terug).
     if(!state.migrations.pullDeadToPipeJun2026){
       state.leads.forEach(l=>{
-        if(l.phase==='dead'){ l.phase='intent'; if(l.flags&&l.flags.approached&&!l.due) l.due=nextFupDate(l.fups||0); changed=true; }
+        // 'geen interesse' (negatieve reactie) NIET de pipeline in trekken — die blijft afgesloten
+        if(l.phase==='dead' && !(l.flags&&l.flags.negative)){ l.phase='intent'; if(l.flags&&l.flags.approached&&!l.due) l.due=nextFupDate(l.fups||0); changed=true; }
       });
       state.migrations.pullDeadToPipeJun2026 = true;
+    }
+    // correctie: geen-interesse-leads die de eerdere pull ten onrechte actief maakte → terug naar afgesloten
+    if(!state.migrations.negBackToDeadJun2026){
+      state.leads.forEach(l=>{ if(l.flags && l.flags.negative && l.phase!=='dead'){ l.phase='dead'; l.due=''; changed=true; } });
+      state.migrations.negBackToDeadJun2026 = true;
     }
     if(changed) saveState();
   }
