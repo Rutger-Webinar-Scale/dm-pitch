@@ -1363,7 +1363,8 @@ function renderBoard(){
   const board = document.getElementById('board');
   let html='';
   const vis = visibleLeads().filter(l=> leadFunnel(l)===activeFunnel && matchPipeSearch(l));
-  const cols = funnelPhases(activeFunnel).filter(ph=> ph!=='dead');
+  // toon ALLE fases incl. 'Afgesloten' — elke ooit-benaderde (VSL-)lead hoort op de board
+  const cols = funnelPhases(activeFunnel);
   board.classList.toggle('cols4', cols.length===4);
   board.classList.toggle('cols5', cols.length>=5);
   cols.forEach(ph=>{
