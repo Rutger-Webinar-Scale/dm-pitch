@@ -907,10 +907,16 @@ async function loadCloud(){
         changed = true;
       }
       if(l.funnel!=='video' || !l.funnelAssigned){ l.funnel='video'; l.funnelAssigned=true; changed = true; }
-      // iedereen in de actieve pipeline: geen enkele lead blijft 'dead' (afgesloten verborgen kolom)
-      if(l.phase==='dead'){ l.phase='intent'; changed = true; }
     });
     state.migrations.removeChatJun2026 = true;
+    // EENMALIG: bestaande afgesloten leads één keer de actieve pipeline in trekken.
+    // NIET elke load — anders kun je een lead nooit meer op 'Afgesloten' zetten (springt terug).
+    if(!state.migrations.pullDeadToPipeJun2026){
+      state.leads.forEach(l=>{
+        if(l.phase==='dead'){ l.phase='intent'; if(l.flags&&l.flags.approached&&!l.due) l.due=nextFupDate(l.fups||0); changed=true; }
+      });
+      state.migrations.pullDeadToPipeJun2026 = true;
+    }
     if(changed) saveState();
   }
   const ud = (userRes.data && userRes.data.data) || {};
