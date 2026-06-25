@@ -465,12 +465,8 @@
     <div class="sec-sub">De output van elke fase is de input van de volgende. Zoek de fase die het systeem verstikt.</div>
     <div id="funnelFlow"></div>
 
-    <div class="sec-h" style="margin-top:34px">Funnel-test — 💬 Chat vs 🎥 VSL</div>
-    <div class="sec-sub">Nieuwe leads worden om-en-om verdeeld. Vergeleken op reactie → call voorgesteld → geboekt.</div>
-    <div id="ftBody"></div>
-
-    <div class="sec-h" style="margin-top:34px">A/B-test — openingsbericht (🎥 VSL-funnel)</div>
-    <div class="sec-sub">Loopt binnen de VSL-funnel: elke VSL-lead krijgt automatisch een variant (om-en-om). Winnaar op basis van positieve reacties. Zo test je je beste opening bínnen VSL, en de funnel-test hierboven beslist chat vs VSL.</div>
+    <div class="sec-h" style="margin-top:34px">A/B-test — openingsbericht</div>
+    <div class="sec-sub">Elke lead krijgt automatisch een variant (om-en-om). Winnaar op basis van positieve reacties — zo test je je beste opening.</div>
     <div id="abBody"></div>
   </section>
 
@@ -478,12 +474,8 @@
   <section class="view" id="view-pipe">
     <div class="lang-bar">
       <div>
-        <div class="sec-h" style="margin:0">Pipelines</div>
-        <div class="sec-sub" style="margin:2px 0 0" id="pipeDesc">Sleep leads tussen de fases. Switch tussen de twee funnels die je test.</div>
-      </div>
-      <div class="range-toggle" id="funnelToggle">
-        <button class="range-btn active" data-fn="video" onclick="setFunnelView('video')">🎥 VSL</button>
-        <button class="range-btn" data-fn="chat" onclick="setFunnelView('chat')">💬 Chat</button>
+        <div class="sec-h" style="margin:0">Pipeline</div>
+        <div class="sec-sub" style="margin:2px 0 0" id="pipeDesc">Sleep leads tussen de fases.</div>
       </div>
     </div>
     <div style="margin-top:12px;position:relative;max-width:340px">
@@ -521,7 +513,7 @@
       </div>
     </div>
 
-    <div class="mignote" style="margin-top:16px">📅 <b>Cadans:</b> follow-up 1 & 2 komen na 12 uur, daarna elke 2 dagen. Plannen valt altijd tussen 06:00–22:00; follow-ups mogen ook in het weekend. Het systeem plant de volgende actie automatisch.</div>
+    <div class="mignote" style="margin-top:16px">📅 <b>Cadans:</b> follow-up 1 & 2 komen de volgende dag, daarna elke 2 dagen. Plannen valt altijd tussen 06:00–22:00; follow-ups mogen ook in het weekend. Het systeem plant de volgende actie automatisch.</div>
 
     <div class="chain" style="margin-top:16px">
       <div class="scard">
@@ -555,13 +547,6 @@
       </div>
     </div>
 
-    <div class="chain" style="margin-top:16px;grid-template-columns:1fr">
-      <div class="scard">
-        <h4>💬 Chat funnel</h4>
-        <div class="meta">Vrij chatten — geen vaste scripts. Alleen de kwartaal check-in (afgesloten leads) heeft er één.</div>
-        <div id="chatFups"></div>
-      </div>
-    </div>
   </section>
 
   <!-- ================= INFO / HUB ================= -->
@@ -599,16 +584,7 @@
         <div><label class="f">Instagram-link</label><input class="f" id="f-link" placeholder="instagram.com/..."></div>
       </div>
 
-      <div class="grid2">
-        <div><label class="f">Funnel</label>
-          <select class="f" id="f-funnel" onchange="onModalFunnel()">
-            <option value="">Automatisch (om-en-om)</option>
-            <option value="video">🎥 VSL</option>
-            <option value="chat">💬 Chat</option>
-          </select>
-        </div>
-        <div><label class="f">Link naar het gesprek</label><input class="f" id="f-convo" placeholder="ig.me/m/... of DM-thread link"></div>
-      </div>
+      <div><label class="f">Link naar het gesprek</label><input class="f" id="f-convo" placeholder="ig.me/m/... of DM-thread link"></div>
 
       <label class="f">Fase in de funnel</label>
       <div class="stepper" id="phaseStepper"></div>
@@ -804,11 +780,13 @@ const FUNNELS = { video:{label:'🎥 VSL', name:'VSL'}, chat:{label:'💬 Chat',
 function leadFunnel(l){ return (l && (l.funnel==='chat'||l.funnel==='video')) ? l.funnel : 'video'; }
 function funnelPhases(fn){ return Object.keys(PHASES).filter(k=>PHASES[k].funnel===fn); }
 function funnelBadge(l){ const fn=leadFunnel(l); return `<span class="plat" title="Funnel">${FUNNELS[fn].label}</span>`; }
-/* round-robin over leads die expliciet aan de test zijn toegewezen (oude video-leads tellen niet mee) */
+/* nieuwe leads gaan voorlopig standaard in de 🎥 VSL-funnel — chat-test ligt stil.
+   Round-robin (chat vs video) bewaard maar uit; zet hieronder weer terug om te testen. */
 function assignFunnel(){
-  const c={chat:0, video:0};
+  return 'video';
+  /* const c={chat:0, video:0};
   state.leads.forEach(l=>{ if(l.funnelAssigned) c[leadFunnel(l)]++; });
-  return c.chat<=c.video ? 'chat' : 'video';
+  return c.chat<=c.video ? 'chat' : 'video'; */
 }
 
 // the tracking flags that drive the metrics (mirrors your Notion KPIs)
@@ -913,6 +891,20 @@ async function loadCloud(){
   if(!state.migrations.histVslJun2026){
     state.leads.forEach(l=>{ if(l.flags && l.flags.approached){ l.funnel='video'; l.funnelAssigned=true; } });
     state.migrations.histVslJun2026 = true;
+    saveState();
+  }
+  // chat-funnel uitgezet: zet alle bestaande chat-leads om naar de VSL-funnel zodat
+  // ze zichtbaar/vindbaar blijven. Map de chat-fases (c_*) op de VSL-fases. Eenmalig.
+  if(!state.migrations.removeChatJun2026){
+    const map = {c_new:'intent', c_convo:'engaged', c_call:'booked', c_booked:'met', c_closed:'dead'};
+    state.leads.forEach(l=>{
+      if(l.funnel==='chat' || (l.phase && map[l.phase])){
+        if(map[l.phase]) l.phase = map[l.phase];
+        l.funnel = 'video'; l.funnelAssigned = true;
+        if(l.phase==='dead' || l.phase==='met') l.due = '';
+      }
+    });
+    state.migrations.removeChatJun2026 = true;
     saveState();
   }
   const ud = (userRes.data && userRes.data.data) || {};
@@ -1830,11 +1822,11 @@ function markReplied(id){
   saveState(); renderAll();
 }
 
-/* cadans: follow-up 1 & 2 na 12 uur, daarna elke 2 dagen — werkuren 06–22 (weekend mag) */
+/* cadans: follow-up 1 & 2 de volgende dag, daarna elke 2 dagen — werkuren 06–22 (weekend mag) */
 function nextFupDate(fupsSent){
   const d = new Date();
-  if((fupsSent||0) < 2){ d.setTime(d.getTime() + 12*3600*1000); }  // fup 1 & 2: +12 uur
-  else { d.setDate(d.getDate() + 2); }                             // daarna: elke 2 dagen
+  if((fupsSent||0) < 2){ d.setDate(d.getDate() + 1); }  // fup 1 & 2: volgende dag (niet dezelfde dag)
+  else { d.setDate(d.getDate() + 2); }                  // daarna: elke 2 dagen
   return toLocalISO(clampSchedule(d));
 }
 function addDaysClamped(n){                                  // voor de kwartaal check-in
@@ -1894,7 +1886,6 @@ function openLead(id){
   document.getElementById('f-convo').value = l?.convoLink||'';
   document.getElementById('f-lastmsg').value = l?.lastMsgDate||'';
   document.getElementById('f-calldate').value = l?.callDate||'';
-  document.getElementById('f-funnel').value = l ? leadFunnel(l) : '';
   document.getElementById('f-lang').value = (l?.lang==='nl'||l?.lang==='en') ? l.lang : '';
   document.getElementById('f-variant').value = l?.variant||'';
   document.getElementById('f-account').innerHTML = accounts().map(a=>`<option value="${esc(a)}">@${esc(a)}</option>`).join('');
@@ -1909,18 +1900,10 @@ function openLead(id){
   document.getElementById('scrim').classList.add('show');
 }
 function closeLead(){ document.getElementById('scrim').classList.remove('show'); editingId=null; }
-/* effective funnel chosen in the modal ('' = auto → video stepper as preview) */
-function modalFunnel(){ return document.getElementById('f-funnel').value || (PHASES[modalPhase] ? PHASES[modalPhase].funnel : 'video'); }
+/* alleen nog de VSL-funnel */
 function renderStepper(){
-  const fn = modalFunnel();
-  document.getElementById('phaseStepper').innerHTML = funnelPhases(fn).map(k=>
+  document.getElementById('phaseStepper').innerHTML = funnelPhases('video').map(k=>
     `<div class="step ${modalPhase===k?'on':''}" data-ph="${k}" onclick="setPhase('${k}')">${PHASES[k].label}</div>`).join('');
-}
-function onModalFunnel(){
-  const fn = document.getElementById('f-funnel').value || 'video';
-  if(!PHASES[modalPhase] || PHASES[modalPhase].funnel!==fn) modalPhase = funnelPhases(fn)[0];
-  renderStepper();
-  setPhase(modalPhase, true);
 }
 function setPhase(ph, silent){
   modalPhase = ph;
@@ -1961,7 +1944,6 @@ function saveLead(){
   const chosenLang = document.getElementById('f-lang').value;        // '' | nl | en
   const chosenVar  = document.getElementById('f-variant').value;     // '' | A | B | C
   const chosenAcct = document.getElementById('f-account').value;     // sending account
-  const chosenFun  = document.getElementById('f-funnel').value;      // '' | video | chat
   if(chosenLang) lead.lang = chosenLang; else delete lead.lang;
   if(chosenAcct) lead.account = chosenAcct;
   lead.convoLink = document.getElementById('f-convo').value.trim();
@@ -1973,9 +1955,8 @@ function saveLead(){
     const i = state.leads.findIndex(x=>x.id===editingId);
     const prev = state.leads[i];
     lead._setter = prev._setter || targetSetter();
-    lead.funnel = chosenFun || prev.funnel;
-    if(prev.funnelAssigned) lead.funnelAssigned = true;
-    if(!lead.funnel) delete lead.funnel;
+    lead.funnel = 'video';
+    lead.funnelAssigned = true;
     lead.lastInbound = prev.lastInbound; lead.lastFupDate = prev.lastFupDate;
     lead.approachDate = prev.approachDate || todayISO();
     ['seenDate','positiveDate','booksentDate','bookedDate'].forEach(k=>{ if(prev[k]) lead[k]=prev[k]; });
@@ -1984,10 +1965,9 @@ function saveLead(){
     state.leads[i]=lead;
   }else{
     lead._setter = targetSetter();
-    if(chosenFun){ lead.funnel = chosenFun; }
-    else { lead.funnel = assignFunnel(); lead.funnelAssigned = true; }
-    // fase moet bij de funnel horen
-    if(PHASES[lead.phase] && PHASES[lead.phase].funnel!==leadFunnel(lead)) lead.phase = funnelPhases(leadFunnel(lead))[0];
+    lead.funnel = 'video'; lead.funnelAssigned = true;
+    // fase moet bij de VSL-funnel horen
+    if(PHASES[lead.phase] && PHASES[lead.phase].funnel!=='video') lead.phase = funnelPhases('video')[0];
     lead.approachDate = todayISO();
     lead.variant = chosenVar || assignVariant();
     stampFlagDates(lead);
@@ -2046,10 +2026,6 @@ function buildScriptBlocks(){
   const bDef={1:["Hier de link nog een keer: [booking link]","Here's the link again: [booking link]"],2:["Zullen we een moment inplannen?","Still want to lock in a time?"]};
   for(let i=1;i<=8;i++){ const d=bDef[i]||["",""]; h+=blockHTML('FUP '+i,'bfup'+i,d[0],d[1],true); }
   document.getElementById('bookedFups').innerHTML=h;
-  // CHAT FUNNEL
-  document.getElementById('chatFups').innerHTML = blockHTML('Kwartaal check-in · afgesloten leads','quarterly',
-    "Hey {{first.name}}, lang geleden! Hoe gaat het er nu mee? Ben benieuwd waar je nu staat.",
-    "Hey {{first.name}}, been a while! How are things going? Curious where you're at now.",true);
 }
 function flashSaved(key){
   if(key!=='initial') return;
