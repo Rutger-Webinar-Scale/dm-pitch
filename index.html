@@ -907,6 +907,8 @@ async function loadCloud(){
         changed = true;
       }
       if(l.funnel!=='video' || !l.funnelAssigned){ l.funnel='video'; l.funnelAssigned=true; changed = true; }
+      // iedereen in de actieve pipeline: geen enkele lead blijft 'dead' (afgesloten verborgen kolom)
+      if(l.phase==='dead'){ l.phase='intent'; changed = true; }
     });
     state.migrations.removeChatJun2026 = true;
     if(changed) saveState();
