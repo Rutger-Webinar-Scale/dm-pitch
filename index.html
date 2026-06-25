@@ -897,7 +897,8 @@ async function loadCloud(){
   // op de VSL-fases en zet de funnel hard op 'video'. Draait elke load zodat er nooit
   // een chat-lead achterblijft (ook leads die na de eenmalige migratie binnenkwamen).
   {
-    const map = {c_new:'intent', c_convo:'engaged', c_call:'booked', c_booked:'met', c_closed:'dead'};
+    // c_closed (afgesloten chat-lead) → 'intent': hoort óók in de actieve pipeline, niet in afgesloten
+    const map = {c_new:'intent', c_convo:'engaged', c_call:'booked', c_booked:'met', c_closed:'intent'};
     let changed = false;
     state.leads.forEach(l=>{
       if(l.funnel==='chat' || (l.phase && map[l.phase])){
@@ -1363,8 +1364,7 @@ function renderBoard(){
   const board = document.getElementById('board');
   let html='';
   const vis = visibleLeads().filter(l=> leadFunnel(l)===activeFunnel && matchPipeSearch(l));
-  // toon ALLE fases incl. 'Afgesloten' — elke ooit-benaderde (VSL-)lead hoort op de board
-  const cols = funnelPhases(activeFunnel);
+  const cols = funnelPhases(activeFunnel).filter(ph=> ph!=='dead');
   board.classList.toggle('cols4', cols.length===4);
   board.classList.toggle('cols5', cols.length>=5);
   cols.forEach(ph=>{
